@@ -1,0 +1,22 @@
+name: forem
+packages:
+  - path: app/blackbox
+  - path: app/controllers
+  - path: app/decorators
+  - path: app/errors
+  - path: app/helpers
+  - path: app/lib
+  - path: app/liquid_tags
+  - path: app/mailers
+  - path: app/middlewares
+  - path: app/models
+  - path: app/policies
+  - path: app/queries
+  - path: app/refinements
+  - path: app/sanitizers
+  - path: app/serializers
+  - path: app/services
+  - path: app/uploaders
+  - path: app/validators
+  - path: app/view_objects
+  - path: app/workers
