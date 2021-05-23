@@ -14,12 +14,16 @@ services:
     environment:
       RAILS_ENV: development
       DATABASE_URL: postgresql://forem:forem@db:5432/PracticalDeveloper_development
+      DATABASE_URL_TEST: postgresql://forem:forem@db:5432/PracticalDeveloper_test
+      DATABASE_NAME_TEST: PracticalDeveloper_test
       REDIS_SESSIONS_URL: redis://redis:6379
       REDIS_SIDEKIQ_URL: redis://redis:6379
       REDIS_URL: redis://redis:6379
       RACK_TIMEOUT_WAIT_TIMEOUT: 10000
       RACK_TIMEOUT_SERVICE_TIMEOUT: 10000
       STATEMENT_TIMEOUT: 10000
+      WEB_CONCURRENCY: 1
+      APP_PROTOCOL: http://
       APP_DOMAIN: rails
     volumes:
       - .:/opt/apps/forem:delegated
