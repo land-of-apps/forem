@@ -87,6 +87,8 @@
   },
   "homepage": "https://github.com/thepracticaldev/dev.to#readme",
   "devDependencies": {
+    "@appland/appmap-swagger": "^0.4.0",
+    "@appland/cli": "^1.0.3",
     "@stoplight/spectral": "5.9.1",
     "@storybook/addon-a11y": "^6.2.9",
     "@storybook/addon-actions": "^6.2.9",

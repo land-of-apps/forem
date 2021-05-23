@@ -139,6 +139,9 @@ end
 
 group :development, :test do
   gem "amazing_print", "~> 1.3" # Great Ruby debugging companion: pretty print Ruby objects to visualize their structure
+  gem "appmap", "~> 0"
+  gem "appmap_depends", "~> 0", github: "applandinc/appmap_depends-ruby", branch: "main"
+  gem "appmap_swagger", "~> 0", github: "applandinc/appmap_swagger-ruby", branch: "main"
   gem "bullet", "~> 6.1" # help to kill N+1 queries and unused eager loading
   gem "capybara", "~> 3.35.3" # Capybara is an integration testing tool for rack based web applications
   gem "cypress-rails", "~> 0.5.0" # For end to end tests (E2E)
