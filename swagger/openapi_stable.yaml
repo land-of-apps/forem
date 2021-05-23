@@ -1,0 +1,1345 @@
+---
+openapi: 3.0.1
+info:
+  title: Forem Server API
+  version: generated-967c65557
+paths:
+  "/":
+    delete:
+      responses:
+        '200':
+          content:
+            application/json: {}
+        '204':
+          content: {}
+        '302':
+          content:
+            text/html: {}
+        '401':
+          content:
+            application/json: {}
+        '404':
+          content:
+            application/json: {}
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                access_token:
+                  type: string
+                app_bundle:
+                  type: string
+                chat_channel:
+                  type: object
+                  properties:
+                    username_string:
+                      type: string
+                format:
+                  type: string
+                locale:
+                  type: string
+                platform:
+                  type: string
+                provider:
+                  type: string
+                resource_type:
+                  type: string
+                role:
+                  type: string
+                tag:
+                  type: object
+                  properties:
+                    user_id:
+                      type: string
+                token:
+                  type: string
+                user:
+                  type: object
+                  properties:
+                    identity_id:
+                      type: string
+                user_block:
+                  type: object
+                  properties:
+                    blocked_id:
+                      type: string
+                user_id:
+                  type: string
+      parameters:
+      - name: blocked_id
+        in: path
+        schema:
+          type: string
+        required: true
+      - name: id
+        in: path
+        schema:
+          type: string
+        required: true
+      - name: tag_id
+        in: path
+        schema:
+          type: string
+        required: true
+    get:
+      responses:
+        '200':
+          content:
+            application/json: {}
+            application/rss+xml: {}
+            application/xml: {}
+            text/html: {}
+            text/plain: {}
+        '301':
+          content: {}
+        '302':
+          content:
+            image/png: {}
+            text/html: {}
+        '400':
+          content:
+            application/json: {}
+        '401':
+          content:
+            application/json: {}
+        '403':
+          content:
+            application/json: {}
+            text/html: {}
+        '404':
+          content:
+            application/json: {}
+        '422':
+          content:
+            application/json: {}
+        '500':
+          content:
+            application/json: {}
+      security:
+      - bearer: []
+      requestBody:
+        content: {}
+      parameters:
+      - name: a_id
+        in: query
+        schema:
+          type: string
+      - name: access_token
+        in: query
+        schema:
+          type: string
+      - name: args
+        in: query
+        schema:
+          type: string
+      - name: article_id
+        in: query
+        schema:
+          type: string
+      - name: blocked_id
+        in: path
+        schema:
+          type: string
+        required: true
+      - name: category
+        in: path
+        schema:
+          type: string
+        required: true
+      - name: channel_slug
+        in: path
+        schema:
+          type: string
+        required: true
+      - name: chat_channel_id
+        in: query
+        schema:
+          type: string
+      - name: class_name
+        in: query
+        schema:
+          type: string
+      - name: collection_id
+        in: query
+        schema:
+          type: string
+      - name: confirmation_token
+        in: query
+        schema:
+          type: string
+      - name: embeddable
+        in: path
+        schema:
+          type: string
+        required: true
+      - name: filter
+        in: query
+        schema:
+          type: string
+      - name: followable_type
+        in: query
+        schema:
+          type: string
+      - name: format
+        in: query
+        schema:
+          type: string
+      - name: i
+        in: query
+        schema:
+          type: string
+      - name: id
+        in: path
+        schema:
+          type: string
+        required: true
+      - name: id_code
+        in: path
+        schema:
+          type: string
+        required: true
+      - name: ids
+        in: query
+        schema:
+          type: array
+          items:
+            type: string
+      - name: include_unpublished
+        in: query
+        schema:
+          type: string
+      - name: locale
+        in: query
+        schema:
+          type: string
+      - name: name
+        in: query
+        schema:
+          type: string
+      - name: notifiable_id
+        in: path
+        schema:
+          type: string
+        required: true
+      - name: notifiable_type
+        in: path
+        schema:
+          type: string
+        required: true
+      - name: onboarding
+        in: query
+        schema:
+          type: string
+      - name: org_id
+        in: path
+        schema:
+          type: string
+        required: true
+      - name: organization_id
+        in: query
+        schema:
+          type: string
+      - name: organization_username
+        in: path
+        schema:
+          type: string
+        required: true
+      - name: p_id
+        in: query
+        schema:
+          type: string
+      - name: page
+        in: query
+        schema:
+          type: string
+      - name: per_page
+        in: query
+        schema:
+          type: string
+      - name: prefill
+        in: query
+        schema:
+          type: string
+      - name: previous_content
+        in: query
+        schema:
+          type: string
+      - name: previous_title
+        in: query
+        schema:
+          type: string
+      - name: published_at
+        in: query
+        schema:
+          type: object
+          properties:
+            gte:
+              type: string
+      - name: q
+        in: query
+        schema:
+          type: string
+      - name: search
+        in: query
+        schema:
+          type: string
+      - name: search_fields
+        in: query
+        schema:
+          type: string
+      - name: secret
+        in: path
+        schema:
+          type: string
+        required: true
+      - name: sitemap
+        in: path
+        schema:
+          type: string
+        required: true
+      - name: slug
+        in: path
+        schema:
+          type: string
+        required: true
+      - name: sort
+        in: query
+        schema:
+          type: string
+      - name: sort_by
+        in: query
+        schema:
+          type: string
+      - name: sort_direction
+        in: query
+        schema:
+          type: string
+      - name: source_id
+        in: query
+        schema:
+          type: string
+      - name: source_type
+        in: query
+        schema:
+          type: string
+      - name: start
+        in: query
+        schema:
+          type: string
+      - name: state
+        in: query
+        schema:
+          type: string
+      - name: status
+        in: query
+        schema:
+          type: string
+      - name: tab
+        in: query
+        schema:
+          type: string
+      - name: tag
+        in: query
+        schema:
+          type: string
+      - name: tag_names
+        in: query
+        schema:
+          type: array
+          items:
+            type: string
+      - name: tags
+        in: query
+        schema:
+          type: string
+      - name: tags_exclude
+        in: query
+        schema:
+          type: string
+      - name: term
+        in: query
+        schema:
+          type: string
+      - name: timeframe
+        in: query
+        schema:
+          type: string
+      - name: to
+        in: query
+        schema:
+          type: string
+      - name: token
+        in: path
+        schema:
+          type: string
+        required: true
+      - name: top
+        in: query
+        schema:
+          type: string
+      - name: type_of
+        in: query
+        schema:
+          type: string
+      - name: url
+        in: query
+        schema:
+          type: string
+      - name: user_id
+        in: query
+        schema:
+          type: string
+      - name: username
+        in: path
+        schema:
+          type: string
+        required: true
+      - name: view
+        in: path
+        schema:
+          type: string
+        required: true
+      - name: which
+        in: path
+        schema:
+          type: string
+        required: true
+    patch:
+      responses:
+        '200':
+          content:
+            application/json: {}
+            text/html: {}
+        '302':
+          content:
+            text/html: {}
+        '401':
+          content:
+            application/json: {}
+        '404':
+          content:
+            application/json: {}
+        '422':
+          content:
+            application/json: {}
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                article:
+                  type: object
+                  properties:
+                    approved:
+                      type: string
+                chat_channel:
+                  type: object
+                  properties:
+                    usernames_string:
+                      type: string
+                chat_channel_membership:
+                  type: object
+                  properties:
+                    membership_id:
+                      type: string
+                    role:
+                      type: string
+                credit_action:
+                  type: string
+                credits:
+                  type: string
+                event:
+                  type: object
+                  properties:
+                    live_now:
+                      type: string
+                follows:
+                  type: array
+                  items:
+                    type: string
+                format:
+                  type: string
+                locale:
+                  type: string
+                profile:
+                  type: object
+                  properties:
+                    location:
+                      type: string
+                response_template:
+                  type: object
+                  properties:
+                    title:
+                      type: string
+                slug:
+                  type: string
+                tag:
+                  type: object
+                  properties:
+                    text_color_hex:
+                      type: string
+                    bg_color_hex:
+                      type: string
+                user:
+                  type: object
+                  properties:
+                    user_status:
+                      type: string
+                    note_for_current_role:
+                      type: string
+                username:
+                  type: string
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                badge:
+                  type: object
+                  properties:
+                    title:
+                      type: string
+                    slug:
+                      type: string
+                    description:
+                      type: string
+                    credits_awarded:
+                      type: string
+                    badge_image:
+                      type: actiondispatch::http::uploadedfile
+      parameters:
+      - name: article_id
+        in: path
+        schema:
+          type: string
+        required: true
+      - name: comment_id
+        in: path
+        schema:
+          type: string
+        required: true
+      - name: id
+        in: path
+        schema:
+          type: string
+        required: true
+    post:
+      responses:
+        '200':
+          content:
+            application/json: {}
+            text/html: {}
+            text/plain: {}
+        '201':
+          content:
+            application/json: {}
+        '204':
+          content: {}
+        '302':
+          content:
+            text/html: {}
+        '400':
+          content:
+            application/json: {}
+            text/html: {}
+        '401':
+          content:
+            application/json: {}
+        '402':
+          content:
+            application/json: {}
+        '403':
+          content:
+            text/html: {}
+        '404':
+          content:
+            application/json: {}
+        '422':
+          content:
+            application/json: {}
+        '429':
+          content:
+            application/json: {}
+      security:
+      - bearer: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                article:
+                  type: object
+                  properties:
+                    body_markdown:
+                      type: string
+                    title:
+                      type: string
+                classified_listing:
+                  type: object
+                  properties:
+                    title:
+                      type: string
+                    category:
+                      type: string
+                    listing_category:
+                      type: object
+                followable_id:
+                  type: integer
+                followable_type:
+                  type: string
+                format:
+                  type: string
+                github_repo:
+                  type: string
+                listing:
+                  type: object
+                  properties:
+                    title:
+                      type: string
+                    body_markdown:
+                      type: string
+                    category:
+                      type: string
+                user_subscription:
+                  type: object
+                  properties:
+                    source_type:
+                      type: string
+                    source_id:
+                      type: string
+                verb:
+                  type: string
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                '{"Message":"{\"input\":{\"key\":\"abc\"}}"}':
+                  type: string
+                '{"Message":"{\"input\":{\"key\":\"DUMMY_VID_CODE\"}}"}':
+                  type: string
+                '{"path":"/ben","user_language":"en"}':
+                  type: string
+                access_token:
+                  type: string
+                active:
+                  type: string
+                api_secret:
+                  type: string
+                app_bundle:
+                  type: string
+                approved:
+                  type: string
+                auth_key:
+                  type: string
+                author_id:
+                  type: string
+                badge:
+                  type: string
+                body_markdown:
+                  type: string
+                category:
+                  type: string
+                channel_name:
+                  type: string
+                chat_channel:
+                  type: object
+                  properties:
+                    channel_name:
+                      type: string
+                    usernames_string:
+                      type: string
+                chat_channel_id:
+                  type: string
+                chat_channel_membership:
+                  type: object
+                  properties:
+                    user_action:
+                      type: string
+                chat_id:
+                  type: string
+                comment:
+                  type: object
+                  properties:
+                    body_markdown:
+                      type: string
+                config:
+                  type: string
+                confirmation:
+                  type: string
+                content:
+                  type: string
+                cost:
+                  type: string
+                credit:
+                  type: object
+                  properties:
+                    number_to_purchase:
+                      type: string
+                current_password:
+                  type: string
+                currently_subscribed:
+                  type: string
+                data:
+                  type: object
+                  properties:
+                    email:
+                      type: string
+                    list_id:
+                      type: string
+                email_body:
+                  type: string
+                email_subject:
+                  type: string
+                email_to:
+                  type: string
+                email_type:
+                  type: string
+                event:
+                  type: object
+                  properties:
+                    title:
+                      type: string
+                    description_markdown:
+                      type: string
+                    starts_at:
+                      type: string
+                    ends_at:
+                      type: string
+                    category:
+                      type: string
+                feedback_message:
+                  type: object
+                  properties:
+                    feedback_type:
+                      type: string
+                    category:
+                      type: string
+                    reported_url:
+                      type: string
+                    message:
+                      type: string
+                feedback_message_id:
+                  type: string
+                force:
+                  type: string
+                group:
+                  type: string
+                html:
+                  type: string
+                input:
+                  type: object
+                  properties:
+                    key:
+                      type: string
+                key:
+                  type: string
+                limit:
+                  type: string
+                locale:
+                  type: string
+                membership_id:
+                  type: string
+                message:
+                  type: object
+                  properties:
+                    message_markdown:
+                      type: string
+                    user_id:
+                      type: string
+                    temp_id:
+                      type: string
+                    chat_channel_id:
+                      type: string
+                message_markdown:
+                  type: string
+                name:
+                  type: string
+                navigation_link:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    url:
+                      type: string
+                    icon:
+                      type: string
+                noteable_id:
+                  type: string
+                noteable_type:
+                  type: string
+                org_id:
+                  type: string
+                org_secret:
+                  type: string
+                organization:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                organization_id:
+                  type: string
+                password:
+                  type: string
+                password_confirmation:
+                  type: string
+                placement_area:
+                  type: string
+                platform:
+                  type: string
+                podcast:
+                  type: object
+                  properties:
+                    user_id:
+                      type: string
+                poll_skip:
+                  type: object
+                  properties:
+                    poll_id:
+                      type: string
+                poll_vote:
+                  type: object
+                  properties:
+                    poll_option_id:
+                      type: string
+                processed_html:
+                  type: string
+                profile_field:
+                  type: object
+                  properties:
+                    label:
+                      type: string
+                    input_type:
+                      type: string
+                    description:
+                      type: string
+                    placeholder_text:
+                      type: string
+                profile_field_group:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    description:
+                      type: string
+                profile_pin:
+                  type: object
+                  properties:
+                    pinnable_id:
+                      type: string
+                published:
+                  type: string
+                rating_vote:
+                  type: object
+                  properties:
+                    article_id:
+                      type: string
+                    group:
+                      type: string
+                    rating:
+                      type: string
+                reactable_id:
+                  type: string
+                reactable_type:
+                  type: string
+                reason:
+                  type: string
+                response_template:
+                  type: object
+                  properties:
+                    type_of:
+                      type: string
+                    content_type:
+                      type: string
+                    content:
+                      type: string
+                    title:
+                      type: string
+                rules:
+                  type: string
+                selected_card:
+                  type: string
+                send_to_admin:
+                  type: string
+                settings_authentication:
+                  type: object
+                  properties:
+                    allowed_registration_email_domains:
+                      type: string
+                settings_campaign:
+                  type: object
+                  properties:
+                    articles_expiry_time:
+                      type: string
+                settings_community:
+                  type: object
+                  properties:
+                    community_emoji:
+                      type: string
+                settings_general:
+                  type: object
+                  properties:
+                    video_encoder_key:
+                      type: string
+                settings_rate_limit:
+                  type: object
+                  properties:
+                    article_update:
+                      type: string
+                settings_user_experience:
+                  type: object
+                  properties:
+                    primary_brand_color_hex:
+                      type: string
+                slug:
+                  type: string
+                social_preview_color:
+                  type: string
+                social_preview_description:
+                  type: string
+                sponsorship:
+                  type: object
+                  properties:
+                    user_id:
+                      type: string
+                    organization_id:
+                      type: string
+                    level:
+                      type: string
+                    status:
+                      type: string
+                    expires_at:
+                      type: string
+                    blurb_html:
+                      type: string
+                    sponsorable_id:
+                      type: string
+                    sponsorable_type:
+                      type: string
+                status:
+                  type: string
+                stripe_token:
+                  type: string
+                tag:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    supported:
+                      type: string
+                    requires_approval:
+                      type: string
+                    wiki_body_markdown:
+                      type: string
+                    short_summary:
+                      type: string
+                    rules_markdown:
+                      type: string
+                    submission_template:
+                      type: string
+                    pretty_name:
+                      type: string
+                    bg_color_hex:
+                      type: string
+                    text_color_hex:
+                      type: string
+                    badge_id:
+                      type: string
+                    category:
+                      type: string
+                    social_preview_template:
+                      type: string
+                title:
+                  type: string
+                token:
+                  type: string
+                type_of:
+                  type: string
+                user:
+                  type: object
+                  properties:
+                    email:
+                      type: string
+                    name:
+                      type: string
+                user_action:
+                  type: string
+                user_block:
+                  type: object
+                  properties:
+                    blocked_id:
+                      type: string
+                user_id:
+                  type: string
+                usernames:
+                  type: string
+                users:
+                  type: array
+                  items:
+                    type: string
+                webhook_endpoint:
+                  type: object
+                  properties:
+                    source:
+                      type: string
+                    target_url:
+                      type: string
+                    events:
+                      type: array
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                i_am_owner:
+                  type: string
+                image:
+                  type: array
+                  items:
+                    type: string
+      parameters:
+      - name: id
+        in: path
+        schema:
+          type: string
+        required: true
+      - name: notifiable_id
+        in: path
+        schema:
+          type: string
+        required: true
+      - name: notifiable_type
+        in: path
+        schema:
+          type: string
+        required: true
+      - name: secret
+        in: path
+        schema:
+          type: string
+        required: true
+      - name: tag_id
+        in: path
+        schema:
+          type: string
+        required: true
+    put:
+      responses:
+        '200':
+          content:
+            application/json: {}
+            text/html: {}
+        '201':
+          content:
+            application/json: {}
+        '204':
+          content: {}
+        '302':
+          content:
+            text/html: {}
+        '400':
+          content:
+            application/json: {}
+            text/html: {}
+        '401':
+          content:
+            application/json: {}
+        '402':
+          content:
+            application/json: {}
+        '403':
+          content:
+            text/html: {}
+        '404':
+          content:
+            application/json: {}
+        '422':
+          content:
+            application/json: {}
+        '429':
+          content:
+            application/json: {}
+      security:
+      - bearer: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                article:
+                  type: object
+                  properties:
+                    title:
+                      type: string
+                    body_markdown:
+                      type: string
+                    series:
+                      type: string
+                classified_listing:
+                  type: object
+                  properties:
+                    action:
+                      type: string
+                format:
+                  type: string
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                active:
+                  type: string
+                app_bundle:
+                  type: string
+                approved:
+                  type: string
+                auth_key:
+                  type: string
+                body_markdown:
+                  type: string
+                chat_channel:
+                  type: object
+                  properties:
+                    channel_name:
+                      type: string
+                    slug:
+                      type: string
+                chat_channel_membership:
+                  type: object
+                  properties:
+                    user_action:
+                      type: string
+                comment:
+                  type: object
+                  properties:
+                    body_markdown:
+                      type: string
+                cost:
+                  type: string
+                current_status:
+                  type: string
+                group:
+                  type: string
+                html:
+                  type: string
+                listing:
+                  type: object
+                  properties:
+                    title:
+                      type: string
+                locale:
+                  type: string
+                name:
+                  type: string
+                navigation_link:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                organization_id:
+                  type: string
+                placement_area:
+                  type: string
+                platform:
+                  type: string
+                processed_html:
+                  type: string
+                profile_field:
+                  type: object
+                  properties:
+                    show_in_onboarding:
+                      type: string
+                profile_field_group:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                published:
+                  type: string
+                rules:
+                  type: string
+                SLACK_CHANNEL:
+                  type: string
+                slug:
+                  type: string
+                social_preview_color:
+                  type: string
+                social_preview_description:
+                  type: string
+                sponsorship:
+                  type: object
+                  properties:
+                    status:
+                      type: string
+                    expires_at:
+                      type: string
+                    blurb_html:
+                      type: string
+                status:
+                  type: string
+                tag:
+                  type: object
+                  properties:
+                    short_summary:
+                      type: string
+                title:
+                  type: string
+                type_of:
+                  type: string
+                user:
+                  type: object
+                  properties:
+                    add_credits:
+                      type: string
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                organization:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    profile_image:
+                      type: actiondispatch::http::uploadedfile
+                podcast:
+                  type: object
+                  properties:
+                    title:
+                      type: string
+                    feed_url:
+                      type: string
+                    description:
+                      type: string
+                    itunes_url:
+                      type: string
+                    overcast_url:
+                      type: string
+                    android_url:
+                      type: string
+                    soundcloud_url:
+                      type: string
+                    website_url:
+                      type: string
+                    twitter_username:
+                      type: string
+                    pattern_image:
+                      type: actiondispatch::http::uploadedfile
+                    main_color_hex:
+                      type: string
+                    image:
+                      type: actiondispatch::http::uploadedfile
+                    slug:
+                      type: string
+                    reachable:
+                      type: string
+                    published:
+                      type: string
+      parameters:
+      - name: id
+        in: path
+        schema:
+          type: string
+        required: true
+  "/.well-known/apple-app-site-association":
+    get:
+      responses:
+        '200':
+          content:
+            application/json: {}
+  "/enter":
+    get:
+      responses:
+        '200':
+          content:
+            text/html: {}
+        '302':
+          content: {}
+      parameters:
+      - name: state
+        in: query
+        schema:
+          type: string
+  "/oauth/revoke":
+    post:
+      responses:
+        '200':
+          content:
+            application/json: {}
+        '403':
+          content:
+            application/json: {}
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+  "/users":
+    post:
+      responses:
+        '200':
+          content:
+            text/html: {}
+        '302':
+          content: {}
+        '401':
+          content:
+            application/json: {}
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                user:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    username:
+                      type: string
+                    email:
+                      type: string
+                    password:
+                      type: string
+                    password_confirmation:
+                      type: string
+  "/users/invitation/accept":
+    get:
+      responses:
+        '302':
+          content: {}
+      parameters:
+      - name: invitation_token
+        in: query
+        schema:
+          type: string
+  "/users/sign_up":
+    get:
+      responses:
+        '200':
+          content:
+            text/html: {}
+      parameters:
+      - name: forem_owner_secret
+        in: query
+        schema:
+          type: string
+      - name: state
+        in: query
+        schema:
+          type: string
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+servers:
+- url: http://{defaultHost}
+  variables:
+    defaultHost:
+      default: localhost:3000

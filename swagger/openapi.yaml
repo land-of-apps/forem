@@ -1,0 +1,1676 @@
+---
+openapi: 3.0.1
+info:
+  title: Forem Server API
+  version: generated-967c65557
+paths:
+  "/":
+    delete:
+      responses:
+        '200':
+          content:
+            application/json: {}
+          description: OK
+        '204':
+          content: {}
+          description: No Content
+        '302':
+          content:
+            text/html: {}
+          description: Found
+        '401':
+          content:
+            application/json: {}
+          description: Unauthorized
+        '404':
+          content:
+            application/json: {}
+          description: Not Found
+      description: destroy
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                access_token:
+                  type: string
+                  example: "[FILTERED]"
+                app_bundle:
+                  type: string
+                  example: dickinson.ward-fritsch.org
+                chat_channel:
+                  type: object
+                  example: '{"username_string"=>"username55"}'
+                  properties:
+                    username_string:
+                      type: string
+                format:
+                  type: string
+                  example: json
+                locale:
+                  type: string
+                platform:
+                  type: string
+                  example: ios
+                provider:
+                  type: string
+                  example: apple
+                resource_type:
+                  type: string
+                  example: Comment
+                role:
+                  type: string
+                  example: trusted
+                tag:
+                  type: object
+                  example: '{"user_id"=>"786"}'
+                  properties:
+                    user_id:
+                      type: string
+                token:
+                  type: string
+                  example: "[FILTERED]"
+                user:
+                  type: object
+                  example: '{"identity_id"=>"30"}'
+                  properties:
+                    identity_id:
+                      type: string
+                user_block:
+                  type: object
+                  example: '{"blocked_id"=>"2994"}'
+                  properties:
+                    blocked_id:
+                      type: string
+                user_id:
+                  type: string
+                  example: '862'
+      parameters:
+      - name: blocked_id
+        in: path
+        schema:
+          type: string
+          example: '2994'
+        required: true
+      - name: id
+        in: path
+        schema:
+          type: string
+          example: '20'
+        required: true
+      - name: tag_id
+        in: path
+        schema:
+          type: string
+          example: '103'
+        required: true
+    get:
+      responses:
+        '200':
+          content:
+            application/json: {}
+            application/rss+xml: {}
+            application/xml: {}
+            text/html: {}
+            text/plain: {}
+          description: OK
+        '301':
+          content: {}
+          description: Moved Permanently
+        '302':
+          content:
+            image/png: {}
+            text/html: {}
+          description: Found
+        '400':
+          content:
+            application/json: {}
+          description: Bad Request
+        '401':
+          content:
+            application/json: {}
+          description: Unauthorized
+        '403':
+          content:
+            application/json: {}
+            text/html: {}
+          description: Forbidden
+        '404':
+          content:
+            application/json: {}
+          description: Not Found
+        '422':
+          content:
+            application/json: {}
+          description: Unprocessable Entity
+        '500':
+          content:
+            application/json: {}
+          description: Internal Server Error
+      description: index
+      security:
+      - bearer: []
+      requestBody:
+        content: {}
+      parameters:
+      - name: a_id
+        in: query
+        schema:
+          type: string
+          example: '219'
+      - name: access_token
+        in: query
+        schema:
+          type: string
+          example: "[FILTERED]"
+      - name: args
+        in: query
+        schema:
+          type: string
+          example: improper
+      - name: article_id
+        in: query
+        schema:
+          type: string
+          example: '70'
+      - name: blocked_id
+        in: path
+        schema:
+          type: string
+          example: '2976'
+        required: true
+      - name: category
+        in: path
+        schema:
+          type: string
+          example: cfp
+        required: true
+      - name: channel_slug
+        in: path
+        schema:
+          type: string
+          example: slug-34
+        required: true
+      - name: chat_channel_id
+        in: query
+        schema:
+          type: string
+          example: '107'
+      - name: class_name
+        in: query
+        schema:
+          type: string
+          example: Article
+      - name: collection_id
+        in: query
+        schema:
+          type: string
+          example: '1'
+      - name: confirmation_token
+        in: query
+        schema:
+          type: string
+          example: "[FILTERED]"
+      - name: embeddable
+        in: path
+        schema:
+          type: string
+          example: tweet
+        required: true
+      - name: filter
+        in: query
+        schema:
+          type: string
+          example: misc
+      - name: followable_type
+        in: query
+        schema:
+          type: string
+          example: User
+      - name: format
+        in: query
+        schema:
+          type: string
+          example: json
+      - name: i
+        in: query
+        schema:
+          type: string
+          example: j
+      - name: id
+        in: path
+        schema:
+          type: string
+          example: '7'
+        required: true
+      - name: id_code
+        in: path
+        schema:
+          type: string
+          example: '86'
+        required: true
+      - name: ids
+        in: query
+        schema:
+          type: array
+          example: 20302033202920322031
+          items:
+            type: string
+      - name: include_unpublished
+        in: query
+        schema:
+          type: string
+          example: '1'
+      - name: locale
+        in: query
+        schema:
+          type: string
+      - name: name
+        in: query
+        schema:
+          type: string
+          example: eli
+      - name: notifiable_id
+        in: path
+        schema:
+          type: string
+          example: '532'
+        required: true
+      - name: notifiable_type
+        in: path
+        schema:
+          type: string
+          example: Article
+        required: true
+      - name: onboarding
+        in: query
+        schema:
+          type: string
+          example: 'true'
+      - name: org_id
+        in: path
+        schema:
+          type: string
+          example: '264'
+        required: true
+      - name: organization_id
+        in: query
+        schema:
+          type: string
+          example: '103'
+      - name: organization_username
+        in: path
+        schema:
+          type: string
+          example: invalid-username
+        required: true
+      - name: p_id
+        in: query
+        schema:
+          type: string
+          example: asdfghjkl
+      - name: page
+        in: query
+        schema:
+          type: string
+          example: '2'
+      - name: per_page
+        in: query
+        schema:
+          type: string
+          example: '2'
+      - name: prefill
+        in: query
+        schema:
+          type: string
+          example: dsdweewewew
+      - name: previous_content
+        in: query
+        schema:
+          type: string
+          example: something something something
+      - name: previous_title
+        in: query
+        schema:
+          type: string
+      - name: published_at
+        in: query
+        schema:
+          type: object
+          example: '{"gte"=>"2021-05-22T17:30:30-05:00"}'
+          properties:
+            gte:
+              type: string
+      - name: q
+        in: query
+        schema:
+          type: string
+          example: hello
+      - name: search
+        in: query
+        schema:
+          type: string
+          example: Dibbert, Dietrich and Robel
+      - name: search_fields
+        in: query
+        schema:
+          type: string
+          example: keyword
+      - name: secret
+        in: path
+        schema:
+          type: string
+          example: "[FILTERED]"
+        required: true
+      - name: sitemap
+        in: path
+        schema:
+          type: string
+          example: sitemap-March-2011.xml
+        required: true
+      - name: slug
+        in: path
+        schema:
+          type: string
+          example: no-highway154-1c6h
+        required: true
+      - name: sort
+        in: query
+        schema:
+          type: string
+          example: desc
+      - name: sort_by
+        in: query
+        schema:
+          type: string
+          example: published_at
+      - name: sort_direction
+        in: query
+        schema:
+          type: string
+          example: desc
+      - name: source_id
+        in: query
+        schema:
+          type: string
+          example: '1'
+      - name: source_type
+        in: query
+        schema:
+          type: string
+          example: Comment
+      - name: start
+        in: query
+        schema:
+          type: string
+          example: 2019-03-29
+      - name: state
+        in: query
+        schema:
+          type: string
+          example: potential
+      - name: status
+        in: query
+        schema:
+          type: string
+          example: published
+      - name: tab
+        in: query
+        schema:
+          type: string
+          example: response-templates
+      - name: tag
+        in: query
+        schema:
+          type: string
+          example: discuss
+      - name: tag_names
+        in: query
+        schema:
+          type: array
+          example: ruby
+          items:
+            type: string
+      - name: tags
+        in: query
+        schema:
+          type: string
+          example: java
+      - name: tags_exclude
+        in: query
+        schema:
+          type: string
+          example: java
+      - name: term
+        in: query
+        schema:
+          type: string
+          example: of mice and men 388
+      - name: timeframe
+        in: query
+        schema:
+          type: string
+          example: latest
+      - name: to
+        in: query
+        schema:
+          type: string
+          example: organizations#articles
+      - name: token
+        in: path
+        schema:
+          type: string
+          example: "[FILTERED]"
+        required: true
+      - name: top
+        in: query
+        schema:
+          type: string
+          example: '7'
+      - name: type_of
+        in: query
+        schema:
+          type: string
+          example: email_reply
+      - name: url
+        in: query
+        schema:
+          type: string
+          example: username1066
+      - name: user_id
+        in: query
+        schema:
+          type: string
+          example: '1'
+      - name: username
+        in: path
+        schema:
+          type: string
+          example: username528
+        required: true
+      - name: view
+        in: path
+        schema:
+          type: string
+          example: moderate
+        required: true
+      - name: which
+        in: path
+        schema:
+          type: string
+          example: organization
+        required: true
+    patch:
+      responses:
+        '200':
+          content:
+            application/json: {}
+            text/html: {}
+          description: OK
+        '302':
+          content:
+            text/html: {}
+          description: Found
+        '401':
+          content:
+            application/json: {}
+          description: Unauthorized
+        '404':
+          content:
+            application/json: {}
+          description: Not Found
+        '422':
+          content:
+            application/json: {}
+          description: Unprocessable Entity
+      description: update
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                article:
+                  type: object
+                  example: '{"approved"=>"true"}'
+                  properties:
+                    approved:
+                      type: string
+                chat_channel:
+                  type: object
+                  example: '{"usernames_string"=>"username54"}'
+                  properties:
+                    usernames_string:
+                      type: string
+                chat_channel_membership:
+                  type: object
+                  example: '{"membership_id"=>"142", "role"=>"member"}'
+                  properties:
+                    membership_id:
+                      type: string
+                    role:
+                      type: string
+                credit_action:
+                  type: string
+                  example: add
+                credits:
+                  type: string
+                  example: '1'
+                event:
+                  type: object
+                  example: '{"live_now"=>"1"}'
+                  properties:
+                    live_now:
+                      type: string
+                follows:
+                  type: array
+                  example: '[{"id"=>"55", "explicit_points"=>"3.0"}, {"id"=>"56",
+                    "explicit_points"=>"10.0"}]'
+                  items:
+                    type: string
+                format:
+                  type: string
+                  example: json
+                locale:
+                  type: string
+                profile:
+                  type: object
+                  example: '{"location"=>"New location, who dis?"}'
+                  properties:
+                    location:
+                      type: string
+                response_template:
+                  type: object
+                  example: '{"title"=>"The Golden Bowl22"}'
+                  properties:
+                    title:
+                      type: string
+                slug:
+                  type: string
+                  example: vile-bodies248-4b69
+                tag:
+                  type: object
+                  example: '{"text_color_hex"=>"", "bg_color_hex"=>""}'
+                  properties:
+                    text_color_hex:
+                      type: string
+                    bg_color_hex:
+                      type: string
+                user:
+                  type: object
+                  example: '{"user_status"=>"Comment Suspend", "note_for_current_role"=>"comment
+                    suspend this user"}'
+                  properties:
+                    user_status:
+                      type: string
+                    note_for_current_role:
+                      type: string
+                username:
+                  type: string
+                  example: username1132
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                badge:
+                  type: object
+                  example: '{"title"=>"Hello, world!", "slug"=>"greeting-badge", "description"=>"Awarded
+                    to welcoming users", "c'
+                  properties:
+                    title:
+                      type: string
+                    slug:
+                      type: string
+                    description:
+                      type: string
+                    credits_awarded:
+                      type: string
+                    badge_image:
+                      type: actiondispatch::http::uploadedfile
+      parameters:
+      - name: article_id
+        in: path
+        schema:
+          type: string
+          example: '275'
+        required: true
+      - name: comment_id
+        in: path
+        schema:
+          type: string
+          example: '1'
+        required: true
+      - name: id
+        in: path
+        schema:
+          type: string
+          example: '5'
+        required: true
+    post:
+      responses:
+        '200':
+          content:
+            application/json: {}
+            text/html: {}
+            text/plain: {}
+          description: OK
+        '201':
+          content:
+            application/json: {}
+          description: Created
+        '204':
+          content: {}
+          description: No Content
+        '302':
+          content:
+            text/html: {}
+          description: Found
+        '400':
+          content:
+            application/json: {}
+            text/html: {}
+          description: Bad Request
+        '401':
+          content:
+            application/json: {}
+          description: Unauthorized
+        '402':
+          content:
+            application/json: {}
+          description: Payment Required
+        '403':
+          content:
+            text/html: {}
+          description: Forbidden
+        '404':
+          content:
+            application/json: {}
+          description: Not Found
+        '422':
+          content:
+            application/json: {}
+          description: Unprocessable Entity
+        '429':
+          content:
+            application/json: {}
+          description: Too Many Requests
+      description: create
+      security:
+      - bearer: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                article:
+                  type: object
+                  example: '{"body_markdown"=>"", "title"=>"That Good Night"}'
+                  properties:
+                    body_markdown:
+                      type: string
+                    title:
+                      type: string
+                classified_listing:
+                  type: object
+                  example: '{"title"=>"Title", "category"=>"cfp", "listing_category"=>{"id"=>64,
+                    "cost"=>5, "created_at"=>"2021-'
+                  properties:
+                    title:
+                      type: string
+                    category:
+                      type: string
+                    listing_category:
+                      type: object
+                followable_id:
+                  type: integer
+                  example: '2038'
+                followable_type:
+                  type: string
+                  example: User
+                format:
+                  type: string
+                  example: json
+                github_repo:
+                  type: string
+                  example: '{"id":22,"additional_note":null,"bytes_size":10279,"created_at":null,"description":"To
+                    Sail Beyond t'
+                listing:
+                  type: object
+                  example: '{"title"=>"Title", "body_markdown"=>"Markdown text", "category"=>"cfp"}'
+                  properties:
+                    title:
+                      type: string
+                    body_markdown:
+                      type: string
+                    category:
+                      type: string
+                user_subscription:
+                  type: object
+                  example: '{"source_type"=>"Article", "source_id"=>"99999999"}'
+                  properties:
+                    source_type:
+                      type: string
+                    source_id:
+                      type: string
+                verb:
+                  type: string
+                  example: follow
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                '{"Message":"{\"input\":{\"key\":\"abc\"}}"}':
+                  type: string
+                '{"Message":"{\"input\":{\"key\":\"DUMMY_VID_CODE\"}}"}':
+                  type: string
+                '{"path":"/ben","user_language":"en"}':
+                  type: string
+                access_token:
+                  type: string
+                  example: "[FILTERED]"
+                active:
+                  type: string
+                  example: 'true'
+                api_secret:
+                  type: string
+                  example: "[FILTERED]"
+                app_bundle:
+                  type: string
+                  example: schimmel.corkery.net
+                approved:
+                  type: string
+                  example: 'true'
+                auth_key:
+                  type: string
+                  example: "[FILTERED]"
+                author_id:
+                  type: string
+                  example: '576'
+                badge:
+                  type: string
+                  example: not-27hello-2c-world-21-27
+                body_markdown:
+                  type: string
+                  example: "[Click here!](https://example.com)"
+                category:
+                  type: string
+                  example: like
+                channel_name:
+                  type: string
+                  example: hey hey hey hey
+                chat_channel:
+                  type: object
+                  example: '{"channel_name"=>"Hello Channel", "usernames_string"=>"username52"}'
+                  properties:
+                    channel_name:
+                      type: string
+                    usernames_string:
+                      type: string
+                chat_channel_id:
+                  type: string
+                  example: '110'
+                chat_channel_membership:
+                  type: object
+                  example: '{"user_action"=>"accept"}'
+                  properties:
+                    user_action:
+                      type: string
+                chat_id:
+                  type: string
+                  example: '171'
+                comment:
+                  type: object
+                  example: '{"body_markdown"=>"hi"}'
+                  properties:
+                    body_markdown:
+                      type: string
+                config:
+                  type: string
+                  example: all_comments
+                confirmation:
+                  type: string
+                  example: My username is @username65 and this action is 100% safe
+                    and appropriate.
+                content:
+                  type: string
+                  example: test note
+                cost:
+                  type: string
+                  example: '22'
+                credit:
+                  type: object
+                  example: '{"number_to_purchase"=>"25"}'
+                  properties:
+                    number_to_purchase:
+                      type: string
+                current_password:
+                  type: string
+                  example: "[FILTERED]"
+                currently_subscribed:
+                  type: string
+                data:
+                  type: object
+                  example: '{"email"=>"person1700@example.com", "list_id"=>"1234"}'
+                  properties:
+                    email:
+                      type: string
+                    list_id:
+                      type: string
+                email_body:
+                  type: string
+                  example: Thanks for your report and being an awesome member!
+                email_subject:
+                  type: string
+                  example: Thank you for your report
+                email_to:
+                  type: string
+                  example: person201@example.com
+                email_type:
+                  type: string
+                  example: reporter
+                event:
+                  type: object
+                  example: '{"title"=>"Hello, world!", "description_markdown"=>"This
+                    is an event", "starts_at"=>"2021-05-22 16:5'
+                  properties:
+                    title:
+                      type: string
+                    description_markdown:
+                      type: string
+                    starts_at:
+                      type: string
+                    ends_at:
+                      type: string
+                    category:
+                      type: string
+                feedback_message:
+                  type: object
+                  example: '{"feedback_type"=>"abuse-reports", "category"=>"rude or
+                    vulgar", "reported_url"=>"https://dev.to", "'
+                  properties:
+                    feedback_type:
+                      type: string
+                    category:
+                      type: string
+                    reported_url:
+                      type: string
+                    message:
+                      type: string
+                feedback_message_id:
+                  type: string
+                  example: '11'
+                force:
+                  type: string
+                group:
+                  type: string
+                  example: campaign
+                html:
+                  type: string
+                  example: "<h1>Hello HTML Variants!</h1>"
+                input:
+                  type: object
+                  example: '{"key"=>"DUMMY_VID_CODE"}'
+                  properties:
+                    key:
+                      type: string
+                key:
+                  type: string
+                  example: TEST_SECRET
+                limit:
+                  type: string
+                  example: '5'
+                locale:
+                  type: string
+                membership_id:
+                  type: string
+                  example: '125'
+                message:
+                  type: object
+                  example: '{"message_markdown"=>"hi", "user_id"=>"2154", "temp_id"=>"sd78jdssd",
+                    "chat_channel_id"=>"214"}'
+                  properties:
+                    message_markdown:
+                      type: string
+                    user_id:
+                      type: string
+                    temp_id:
+                      type: string
+                    chat_channel_id:
+                      type: string
+                message_markdown:
+                  type: string
+                name:
+                  type: string
+                  example: Computer stuff
+                navigation_link:
+                  type: object
+                  example: '{"name"=>"Test 2", "url"=>"https://www.test2.com", "icon"=>"<svg
+                    height=''10''></svg>"}'
+                  properties:
+                    name:
+                      type: string
+                    url:
+                      type: string
+                    icon:
+                      type: string
+                noteable_id:
+                  type: string
+                  example: '13'
+                noteable_type:
+                  type: string
+                  example: FeedbackMessage
+                org_id:
+                  type: string
+                  example: '321'
+                org_secret:
+                  type: string
+                  example: "[FILTERED]"
+                organization:
+                  type: object
+                  example: '{"id"=>"353"}'
+                  properties:
+                    id:
+                      type: string
+                organization_id:
+                  type: string
+                  example: '46'
+                password:
+                  type: string
+                  example: "[FILTERED]"
+                password_confirmation:
+                  type: string
+                  example: "[FILTERED]"
+                placement_area:
+                  type: string
+                  example: sidebar_left
+                platform:
+                  type: string
+                  example: ios
+                podcast:
+                  type: object
+                  example: '{"user_id"=>"685"}'
+                  properties:
+                    user_id:
+                      type: string
+                poll_skip:
+                  type: object
+                  example: '{"poll_id"=>"3"}'
+                  properties:
+                    poll_id:
+                      type: string
+                poll_vote:
+                  type: object
+                  example: '{"poll_option_id"=>"5"}'
+                  properties:
+                    poll_option_id:
+                      type: string
+                processed_html:
+                  type: string
+                  example: "<p>Hello!</p>"
+                profile_field:
+                  type: object
+                  example: '{"label"=>"Test Location", "input_type"=>"text_field",
+                    "description"=>"users'' location", "placeholde'
+                  properties:
+                    label:
+                      type: string
+                    input_type:
+                      type: string
+                    description:
+                      type: string
+                    placeholder_text:
+                      type: string
+                profile_field_group:
+                  type: object
+                  example: '{"name"=>"Group 1", "description"=>"Description"}'
+                  properties:
+                    name:
+                      type: string
+                    description:
+                      type: string
+                profile_pin:
+                  type: object
+                  example: '{"pinnable_id"=>"618"}'
+                  properties:
+                    pinnable_id:
+                      type: string
+                published:
+                  type: string
+                  example: 'true'
+                rating_vote:
+                  type: object
+                  example: '{"article_id"=>"628", "group"=>"experience_level", "rating"=>"3.0"}'
+                  properties:
+                    article_id:
+                      type: string
+                    group:
+                      type: string
+                    rating:
+                      type: string
+                reactable_id:
+                  type: string
+                  example: '646'
+                reactable_type:
+                  type: string
+                  example: Article
+                reason:
+                  type: string
+                  example: abuse-reports
+                response_template:
+                  type: object
+                  example: '{"type_of"=>"mod_comment", "content_type"=>"html", "content"=>"nice
+                    job!", "title"=>"something"}'
+                  properties:
+                    type_of:
+                      type: string
+                    content_type:
+                      type: string
+                    content:
+                      type: string
+                    title:
+                      type: string
+                rules:
+                  type: string
+                  example: Things computers do
+                selected_card:
+                  type: string
+                  example: test_cc_3
+                send_to_admin:
+                  type: string
+                  example: 'true'
+                settings_authentication:
+                  type: object
+                  example: '{"allowed_registration_email_domains"=>"dev.to, forem.com,
+                    2u.com"}'
+                  properties:
+                    allowed_registration_email_domains:
+                      type: string
+                settings_campaign:
+                  type: object
+                  example: '{"articles_expiry_time"=>"4"}'
+                  properties:
+                    articles_expiry_time:
+                      type: string
+                settings_community:
+                  type: object
+                  example: '{"community_emoji"=>"i love croissants"}'
+                  properties:
+                    community_emoji:
+                      type: string
+                settings_general:
+                  type: object
+                  example: '{"video_encoder_key"=>"[FILTERED]"}'
+                  properties:
+                    video_encoder_key:
+                      type: string
+                settings_rate_limit:
+                  type: object
+                  example: '{"article_update"=>"3"}'
+                  properties:
+                    article_update:
+                      type: string
+                settings_user_experience:
+                  type: object
+                  example: '{"primary_brand_color_hex"=>"0a0a0a"}'
+                  properties:
+                    primary_brand_color_hex:
+                      type: string
+                slug:
+                  type: string
+                  example: computer
+                social_preview_color:
+                  type: string
+                  example: "#000"
+                social_preview_description:
+                  type: string
+                  example: Computer things
+                sponsorship:
+                  type: object
+                  example: '{"user_id"=>"776", "organization_id"=>"87", "level"=>"gold",
+                    "status"=>"live", "expires_at"=>"2021-0'
+                  properties:
+                    user_id:
+                      type: string
+                    organization_id:
+                      type: string
+                    level:
+                      type: string
+                    status:
+                      type: string
+                    expires_at:
+                      type: string
+                    blurb_html:
+                      type: string
+                    sponsorable_id:
+                      type: string
+                    sponsorable_type:
+                      type: string
+                status:
+                  type: string
+                  example: Resolved
+                stripe_token:
+                  type: string
+                  example: "[FILTERED]"
+                tag:
+                  type: object
+                  example: '{"name"=>"WWW", "supported"=>"true", "requires_approval"=>"true",
+                    "wiki_body_markdown"=>"## In here '
+                  properties:
+                    name:
+                      type: string
+                    supported:
+                      type: string
+                    requires_approval:
+                      type: string
+                    wiki_body_markdown:
+                      type: string
+                    short_summary:
+                      type: string
+                    rules_markdown:
+                      type: string
+                    submission_template:
+                      type: string
+                    pretty_name:
+                      type: string
+                    bg_color_hex:
+                      type: string
+                    text_color_hex:
+                      type: string
+                    badge_id:
+                      type: string
+                    category:
+                      type: string
+                    social_preview_template:
+                      type: string
+                title:
+                  type: string
+                  example: Hello!
+                token:
+                  type: string
+                  example: "[FILTERED]"
+                type_of:
+                  type: string
+                  example: Welcome
+                user:
+                  type: object
+                  example: '{"email"=>"hey178@email.co", "name"=>"Roger 117"}'
+                  properties:
+                    email:
+                      type: string
+                    name:
+                      type: string
+                user_action:
+                  type: string
+                  example: decline
+                user_block:
+                  type: object
+                  example: '{"blocked_id"=>"2982"}'
+                  properties:
+                    blocked_id:
+                      type: string
+                user_id:
+                  type: string
+                  example: '925'
+                usernames:
+                  type: string
+                  example: username19, username20
+                users:
+                  type: array
+                  example: ''
+                  items:
+                    type: string
+                webhook_endpoint:
+                  type: object
+                  example: '{"source"=>"stackbit", "target_url"=>"https://wolff.io/leonardo.mosciski",
+                    "events"=>["article_creat'
+                  properties:
+                    source:
+                      type: string
+                    target_url:
+                      type: string
+                    events:
+                      type: array
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                i_am_owner:
+                  type: string
+                  example: '1'
+                image:
+                  type: array
+                  example: "[#<ActionDispatch::Http::UploadedFile:0x00007f4234744168
+                    @tempfile=#<Tempfile: (closed)>, @original_"
+                  items:
+                    type: string
+      parameters:
+      - name: id
+        in: path
+        schema:
+          type: string
+          example: '8'
+        required: true
+      - name: notifiable_id
+        in: path
+        schema:
+          type: string
+          example: '536'
+        required: true
+      - name: notifiable_type
+        in: path
+        schema:
+          type: string
+          example: Article
+        required: true
+      - name: secret
+        in: path
+        schema:
+          type: string
+          example: "[FILTERED]"
+        required: true
+      - name: tag_id
+        in: path
+        schema:
+          type: string
+          example: '101'
+        required: true
+    put:
+      responses:
+        '200':
+          content:
+            application/json: {}
+            text/html: {}
+          description: OK
+        '201':
+          content:
+            application/json: {}
+          description: Created
+        '204':
+          content: {}
+          description: No Content
+        '302':
+          content:
+            text/html: {}
+          description: Found
+        '400':
+          content:
+            application/json: {}
+            text/html: {}
+          description: Bad Request
+        '401':
+          content:
+            application/json: {}
+          description: Unauthorized
+        '402':
+          content:
+            application/json: {}
+          description: Payment Required
+        '403':
+          content:
+            text/html: {}
+          description: Forbidden
+        '404':
+          content:
+            application/json: {}
+          description: Not Found
+        '422':
+          content:
+            application/json: {}
+          description: Unprocessable Entity
+        '429':
+          content:
+            application/json: {}
+          description: Too Many Requests
+      description: update
+      security:
+      - bearer: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                article:
+                  type: object
+                  example: '{"title"=>"The Wives of Bath", "body_markdown"=>"Yo ho
+                    ho", "series"=>"a series"}'
+                  properties:
+                    title:
+                      type: string
+                    body_markdown:
+                      type: string
+                    series:
+                      type: string
+                classified_listing:
+                  type: object
+                  example: '{"action"=>"bump"}'
+                  properties:
+                    action:
+                      type: string
+                format:
+                  type: string
+                  example: json
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                active:
+                  type: string
+                  example: 'true'
+                app_bundle:
+                  type: string
+                  example: gusikowski-raynor.torphy.io
+                approved:
+                  type: string
+                  example: 'true'
+                auth_key:
+                  type: string
+                  example: "[FILTERED]"
+                body_markdown:
+                  type: string
+                  example: "[Click here!](https://example.com)"
+                chat_channel:
+                  type: object
+                  example: '{"channel_name"=>"Hello Channel", "slug"=>"hello-channelly"}'
+                  properties:
+                    channel_name:
+                      type: string
+                    slug:
+                      type: string
+                chat_channel_membership:
+                  type: object
+                  example: '{"user_action"=>"accept"}'
+                  properties:
+                    user_action:
+                      type: string
+                comment:
+                  type: object
+                  example: '{"body_markdown"=>"{% gist flsnjfklsd %}"}'
+                  properties:
+                    body_markdown:
+                      type: string
+                cost:
+                  type: string
+                  example: '22'
+                current_status:
+                  type: string
+                  example: archived
+                group:
+                  type: string
+                  example: campaign
+                html:
+                  type: string
+                  example: "<h1>Hello HTML Variants!</h1>"
+                listing:
+                  type: object
+                  example: '{"title"=>"updated"}'
+                  properties:
+                    title:
+                      type: string
+                locale:
+                  type: string
+                name:
+                  type: string
+                  example: Computer stuff
+                navigation_link:
+                  type: object
+                  example: '{"name"=>"Example"}'
+                  properties:
+                    name:
+                      type: string
+                organization_id:
+                  type: string
+                  example: '48'
+                placement_area:
+                  type: string
+                  example: sidebar_left
+                platform:
+                  type: string
+                  example: ios
+                processed_html:
+                  type: string
+                  example: "<p>Hello!</p>"
+                profile_field:
+                  type: object
+                  example: '{"show_in_onboarding"=>"false"}'
+                  properties:
+                    show_in_onboarding:
+                      type: string
+                profile_field_group:
+                  type: object
+                  example: '{"name"=>"Group 2"}'
+                  properties:
+                    name:
+                      type: string
+                published:
+                  type: string
+                  example: 'true'
+                rules:
+                  type: string
+                  example: Things computers do
+                SLACK_CHANNEL:
+                  type: string
+                  example: SECRET_VALUE
+                slug:
+                  type: string
+                  example: computer
+                social_preview_color:
+                  type: string
+                  example: "#000"
+                social_preview_description:
+                  type: string
+                  example: Computer things
+                sponsorship:
+                  type: object
+                  example: '{"status"=>"live", "expires_at"=>"2021-06-22 16:58:31
+                    -0500", "blurb_html"=>"The Needle''s Eye"}'
+                  properties:
+                    status:
+                      type: string
+                    expires_at:
+                      type: string
+                    blurb_html:
+                      type: string
+                status:
+                  type: string
+                  example: confirmedsssss
+                tag:
+                  type: object
+                  example: '{"short_summary"=>"Mlkshk wolf bushwick franzen humblebrag
+                    next level carry."}'
+                  properties:
+                    short_summary:
+                      type: string
+                title:
+                  type: string
+                  example: Hello!
+                type_of:
+                  type: string
+                  example: Welcome
+                user:
+                  type: object
+                  example: '{"add_credits"=>"5"}'
+                  properties:
+                    add_credits:
+                      type: string
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                organization:
+                  type: object
+                  example: '{"id"=>"357", "profile_image"=>#<ActionDispatch::Http::UploadedFile:0x00007f421790f488
+                    @tempfile=#<T'
+                  properties:
+                    id:
+                      type: string
+                    profile_image:
+                      type: actiondispatch::http::uploadedfile
+                podcast:
+                  type: object
+                  example: '{"title"=>"hello", "feed_url"=>"https://pod.example.com/rss.rss",
+                    "description"=>"Description", "itu'
+                  properties:
+                    title:
+                      type: string
+                    feed_url:
+                      type: string
+                    description:
+                      type: string
+                    itunes_url:
+                      type: string
+                    overcast_url:
+                      type: string
+                    android_url:
+                      type: string
+                    soundcloud_url:
+                      type: string
+                    website_url:
+                      type: string
+                    twitter_username:
+                      type: string
+                    pattern_image:
+                      type: actiondispatch::http::uploadedfile
+                    main_color_hex:
+                      type: string
+                    image:
+                      type: actiondispatch::http::uploadedfile
+                    slug:
+                      type: string
+                    reachable:
+                      type: string
+                    published:
+                      type: string
+      parameters:
+      - name: id
+        in: path
+        schema:
+          type: string
+          example: '19'
+        required: true
+  "/.well-known/apple-app-site-association":
+    get:
+      responses:
+        '200':
+          content:
+            application/json: {}
+          description: OK
+      description: Apple Application Site Association - based on Apple docs guidelines
+        [developer.apple.com/library/archive/documentation/General/Conceptual/AppSearch/UniversalLinks.html](https://developer.apple.com/library/archive/documentation/General/Conceptual/AppSearch/UniversalLinks.html)
+  "/enter":
+    get:
+      responses:
+        '200':
+          content:
+            text/html: {}
+          description: OK
+        '302':
+          content: {}
+          description: Found
+      description: new
+      parameters:
+      - name: state
+        in: query
+        schema:
+          type: string
+          example: email_signup
+  "/oauth/revoke":
+    post:
+      responses:
+        '200':
+          content:
+            application/json: {}
+          description: OK
+        '403':
+          content:
+            application/json: {}
+          description: Forbidden
+      description: OAuth 2.0 Token Revocation - [tools.ietf.org/html/rfc7009](http://tools.ietf.org/html/rfc7009)
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+                  example: "[FILTERED]"
+  "/users":
+    post:
+      responses:
+        '200':
+          content:
+            text/html: {}
+          description: OK
+        '302':
+          content: {}
+          description: Found
+        '401':
+          content:
+            application/json: {}
+          description: Unauthorized
+      description: rubocop:disable Metrics/CyclomaticComplexity rubocop:disable Metrics/PerceivedComplexity
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                user:
+                  type: object
+                  example: '{"name"=>"test", "username"=>"username", "email"=>"yo@whatup.com",
+                    "password"=>"[FILTERED]", "passwo'
+                  properties:
+                    name:
+                      type: string
+                    username:
+                      type: string
+                    email:
+                      type: string
+                    password:
+                      type: string
+                    password_confirmation:
+                      type: string
+  "/users/invitation/accept":
+    get:
+      responses:
+        '302':
+          content: {}
+          description: Found
+      parameters:
+      - name: invitation_token
+        in: query
+        schema:
+          type: string
+          example: "[FILTERED]"
+  "/users/sign_up":
+    get:
+      responses:
+        '200':
+          content:
+            text/html: {}
+          description: OK
+      description: new
+      parameters:
+      - name: forem_owner_secret
+        in: query
+        schema:
+          type: string
+          example: "[FILTERED]"
+      - name: state
+        in: query
+        schema:
+          type: string
+          example: email_signup
+components:
+  securitySchemes:
+    bearer:
+      type: http
+      scheme: bearer
+servers:
+- url: http://{defaultHost}
+  variables:
+    defaultHost:
+      default: localhost:3000
