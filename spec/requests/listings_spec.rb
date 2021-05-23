@@ -40,7 +40,7 @@ RSpec.describe "/listings", type: :request do
       post "/listings", params: listing_params
     end
 
-    it "returns text/html and has status 200" do
+    it "returns text/html and has status 200", unstable: true do
       get "/listings"
       expect(response.media_type).to eq("text/html")
       expect(response).to have_http_status(:ok)
