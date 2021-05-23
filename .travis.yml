@@ -48,4 +48,4 @@ install:
   - yarn install --frozen-lockfile
 script:
   - bundle exec rails db:create db:schema:load webpacker:compile
-  - APPMAP=true bundle exec rspec -t "~large" spec/requests
+  - APPMAP=true bundle exec rspec -t "~large" -t "~unstable" spec/requests spec/services spec/views spec/workers
