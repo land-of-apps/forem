@@ -56,11 +56,15 @@ RSpec.describe "Dashboards", type: :request do
         expect(response.body).to include "Subscriptions"
       end
 
-      it "renders pagination if minimum amount of posts" do
-        create_list(:article, 52, user: user)
-        get "/dashboard"
-        expect(response.body).to include "pagination"
+      # rubocop:disable RSpec/NestedGroups
+      context large: true do
+        it "renders pagination if minimum amount of posts" do
+          create_list(:article, 52, user: user)
+          get "/dashboard"
+          expect(response.body).to include "pagination"
+        end
       end
+      # rubocop:enable RSpec/NestedGroups
 
       it "does not render pagination if less than one full page" do
         create_list(:article, 3, user: user)
@@ -353,13 +357,15 @@ RSpec.describe "Dashboards", type: :request do
       end.to raise_error(ActiveRecord::RecordNotFound)
     end
 
-    it "renders pagination if minimum amount of subscriptions" do
-      create_list(:user_subscription,
-                  102, # Current pagination limit is 100
-                  author: author,
-                  user_subscription_sourceable: article_with_user_subscription_tag)
-      get "/dashboard/subscriptions", params: params
-      expect(response.body).to include "pagination"
+    context large: true do
+      it "renders pagination if minimum amount of subscriptions" do
+        create_list(:user_subscription,
+                    102, # Current pagination limit is 100
+                    author: author,
+                    user_subscription_sourceable: article_with_user_subscription_tag)
+        get "/dashboard/subscriptions", params: params
+        expect(response.body).to include "pagination"
+      end
     end
 
     it "does not render pagination if less than one full page" do
