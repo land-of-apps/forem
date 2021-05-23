@@ -44,7 +44,7 @@ install:
   - nvm install
   - bundle config set path 'vendor/bundle'
   - cp .env_sample .env
-  - bin/ci-bundle
+  - bundle
   - yarn install --frozen-lockfile
 script:
   - bundle exec rails db:create db:schema:load webpacker:compile
