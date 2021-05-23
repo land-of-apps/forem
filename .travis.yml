@@ -1,0 +1,51 @@
+branches:
+  only:
+    - main
+language: ruby
+cache:
+  bundler: true
+  directories:
+    - node_modules
+rvm:
+  - 2.7.2
+addons:
+  postgresql: '10' # Travis does not work out of the box with Postgres 11 yet
+  chrome: 'stable'
+  artifacts:
+    paths:
+      - $(ls tmp/screenshots/*.png | tr "\n" ":")
+      - $(ls tmp/csvs/*.csv | tr "\n" ":")
+      - $(ls cypress/screenshots/*.* | tr "\n" ":")
+      - $(ls cypress/videos/*.* | tr "\n" ":")
+    debug: true
+env:
+  global:
+    - RAILS_ENV=test
+    - DATABASE_URL=postgres://postgres@localhost/Forem_prod_test
+    - DATABASE_NAME=Forem_prod_test
+    - DATABASE_URL_TEST=postgres://postgres@localhost/Forem_test
+    - DATABASE_NAME_TEST=Forem_test
+    # Dummy values needed to verify the app boots via "rails runner"
+    - APP_PROTOCOL=http://
+    - APP_DOMAIN=localhost:3000
+    - HEROKU_APP_URL=practicaldev.herokuapp.com
+    - SECRET_KEY_BASE=dummydummydummy
+    - GITHUB_KEY=dummy
+    - GITHUB_SECRET=dummy
+    - KNAPSACK_PRO_FIXED_QUEUE_SPLIT=true
+    - KNAPSACK_PRO_LOG_LEVEL=info
+    - KNAPSACK_PRO_CI_NODE_TOTAL=3
+    - COVERAGE_REPORTS_TOTAL=4
+    - FOREM_OWNER_SECRET="secret" # test secret so e2e tests can run properly.
+before_install:
+  - gem install bundler:"<2.3"
+install:
+  - date --rfc-3339=seconds
+  - nvm install
+  - bundle config set path 'vendor/bundle'
+  - cp .env_sample .env
+  - bin/ci-bundle
+  - yarn install --frozen-lockfile
+script:
+  - bundle exec rails db:create db:schema:load webpacker:compile
+  - APPMAP=true bundle exec rspec spec/requests
