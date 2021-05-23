@@ -1,6 +1,6 @@
 branches:
   only:
-    - main
+    - appmap
 language: ruby
 cache:
   bundler: true
