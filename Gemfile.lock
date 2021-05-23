@@ -22,7 +22,7 @@ GIT
 
 GIT
   remote: https://github.com/applandinc/appmap_swagger-ruby.git
-  revision: 2150982a40d0a76fc9adcc828660dc6764197260
+  revision: faece33a8b2f18efc1c3593b381a27f8eb3a08a9
   branch: main
   specs:
     appmap_swagger (0.2.0)
@@ -290,12 +290,16 @@ GEM
       i18n (>= 1.6, < 2)
     fakeredis (0.8.0)
       redis (~> 4.1)
-    faraday (1.4.1)
+    faraday (1.4.2)
+      faraday-em_http (~> 1.0)
+      faraday-em_synchrony (~> 1.0)
       faraday-excon (~> 1.1)
       faraday-net_http (~> 1.0)
       faraday-net_http_persistent (~> 1.1)
       multipart-post (>= 1.2, < 3)
       ruby2_keywords (>= 0.0.4)
+    faraday-em_http (1.0.0)
+    faraday-em_synchrony (1.0.0)
     faraday-excon (1.1.0)
     faraday-net_http (1.0.1)
     faraday-net_http_persistent (1.1.0)
