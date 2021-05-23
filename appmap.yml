@@ -20,7 +20,7 @@ packages:
   - gem: cloudinary
   - gem: devise
   - gem: doorkeeper
-  - gem: fog-aws
+#  - gem: fog-aws
   - gem: gibbon
   - gem: octokit
   - gem: omniauth
@@ -31,7 +31,7 @@ packages:
   - gem: recaptcha
   - gem: redcarpet
   - gem: redis
-  - gem: rolify
+#  - gem: rolify
   - gem: s3_direct_upload
   - gem: sidekiq
   - gem: stripe
