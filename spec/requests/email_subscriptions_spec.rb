@@ -15,7 +15,7 @@ RSpec.describe "EmailSubscriptions", type: :request do
                                                               })
   end
 
-  describe "GET /email_subscriptions/unsubscribe", unstable: true do
+  describe "GET /email_subscriptions/unsubscribe" do
     it "returns 200 if valid" do
       get email_subscriptions_unsubscribe_url(ut: generate_token(user.id))
       expect(response.status).to be(200)

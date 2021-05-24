@@ -40,6 +40,14 @@ RSpec.describe "/listings", type: :request do
       post "/listings", params: listing_params
     end
 
+    # AppMap stack overflow error
+    # /Users/kgilpin/source/appland/appmap-ruby/lib/appmap/hook/method.rb:65:in `block (2 levels) in activate'
+    # /Users/kgilpin/source/appland/appmap-ruby/lib/appmap/hook/method.rb:52:in `block (3 levels) in activate'
+    # /Users/kgilpin/source/appland/appmap-ruby/lib/appmap/hook/method.rb:65:in `block (2 levels) in activate'
+    # /Users/kgilpin/source/appland/appmap-ruby/lib/appmap/hook/method.rb:52:in `block (3 levels) in activate'
+    # /Users/kgilpin/source/appland/appmap-ruby/lib/appmap/hook/method.rb:65:in `block (2 levels) in activate'
+    # ./app/models/user.rb:400:in `suspended?'
+    # ./app/controllers/application_controller.rb:133:in `raise_suspended'
     it "returns text/html and has status 200", unstable: true do
       get "/listings"
       expect(response.media_type).to eq("text/html")
