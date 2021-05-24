@@ -2,7 +2,7 @@
 openapi: 3.0.1
 info:
   title: Forem Server API
-  version: generated-967c65557
+  version: generated-c8e49e3e2
 paths:
   "/":
     delete:
@@ -38,7 +38,7 @@ paths:
                   example: "[FILTERED]"
                 app_bundle:
                   type: string
-                  example: dickinson.ward-fritsch.org
+                  example: bernhard-kris.block-farrell.info
                 chat_channel:
                   type: object
                   example: '{"username_string"=>"username55"}'
@@ -55,7 +55,7 @@ paths:
                   example: ios
                 provider:
                   type: string
-                  example: apple
+                  example: twitter
                 resource_type:
                   type: string
                   example: Comment
@@ -64,7 +64,7 @@ paths:
                   example: trusted
                 tag:
                   type: object
-                  example: '{"user_id"=>"786"}'
+                  example: '{"user_id"=>"422"}'
                   properties:
                     user_id:
                       type: string
@@ -79,31 +79,31 @@ paths:
                       type: string
                 user_block:
                   type: object
-                  example: '{"blocked_id"=>"2994"}'
+                  example: '{"blocked_id"=>"2622"}'
                   properties:
                     blocked_id:
                       type: string
                 user_id:
                   type: string
-                  example: '862'
+                  example: '498'
       parameters:
       - name: blocked_id
         in: path
         schema:
           type: string
-          example: '2994'
+          example: '2622'
         required: true
       - name: id
         in: path
         schema:
           type: string
-          example: '20'
+          example: '10'
         required: true
       - name: tag_id
         in: path
         schema:
           type: string
-          example: '103'
+          example: '68'
         required: true
     get:
       responses:
@@ -158,12 +158,16 @@ paths:
         in: query
         schema:
           type: string
-          example: '219'
+          example: '214'
       - name: access_token
         in: query
         schema:
           type: string
           example: "[FILTERED]"
+      - name: approved
+        in: query
+        schema:
+          type: string
       - name: args
         in: query
         schema:
@@ -173,12 +177,12 @@ paths:
         in: query
         schema:
           type: string
-          example: '70'
+          example: '65'
       - name: blocked_id
         in: path
         schema:
           type: string
-          example: '2976'
+          example: '2604'
         required: true
       - name: category
         in: path
@@ -196,7 +200,7 @@ paths:
         in: query
         schema:
           type: string
-          example: '107'
+          example: '103'
       - name: class_name
         in: query
         schema:
@@ -237,12 +241,12 @@ paths:
         in: query
         schema:
           type: string
-          example: j
+          example: i
       - name: id
         in: path
         schema:
           type: string
-          example: '7'
+          example: '3'
         required: true
       - name: id_code
         in: path
@@ -254,7 +258,7 @@ paths:
         in: query
         schema:
           type: array
-          example: 20302033202920322031
+          example: 16631666166216651664
           items:
             type: string
       - name: include_unpublished
@@ -275,7 +279,7 @@ paths:
         in: path
         schema:
           type: string
-          example: '532'
+          example: '527'
         required: true
       - name: notifiable_type
         in: path
@@ -292,13 +296,13 @@ paths:
         in: path
         schema:
           type: string
-          example: '264'
+          example: '225'
         required: true
       - name: organization_id
         in: query
         schema:
           type: string
-          example: '103'
+          example: '64'
       - name: organization_username
         in: path
         schema:
@@ -338,7 +342,7 @@ paths:
         in: query
         schema:
           type: object
-          example: '{"gte"=>"2021-05-22T17:30:30-05:00"}'
+          example: '{"gte"=>"2021-05-24T02:16:08+03:00"}'
           properties:
             gte:
               type: string
@@ -351,7 +355,7 @@ paths:
         in: query
         schema:
           type: string
-          example: Dibbert, Dietrich and Robel
+          example: Lehner-Bogan
       - name: search_fields
         in: query
         schema:
@@ -373,7 +377,7 @@ paths:
         in: path
         schema:
           type: string
-          example: no-highway154-1c6h
+          example: his-dark-materials154-1m5d
         required: true
       - name: sort
         in: query
@@ -384,7 +388,7 @@ paths:
         in: query
         schema:
           type: string
-          example: published_at
+          example: hotness_score
       - name: sort_direction
         in: query
         schema:
@@ -446,12 +450,13 @@ paths:
         in: query
         schema:
           type: string
-          example: of mice and men 388
+          example: title
       - name: timeframe
-        in: query
+        in: path
         schema:
           type: string
-          example: latest
+          example: week
+        required: true
       - name: to
         in: query
         schema:
@@ -489,6 +494,11 @@ paths:
           type: string
           example: username528
         required: true
+      - name: ut
+        in: query
+        schema:
+          type: string
+          example: BAh7CDoMdXNlcl9pZDA6D2VtYWlsX3R5cGU6IGVtYWlsX21lbnRpb25fbm90aWZpY2F0aW9uczoPZXhwaXJlc19hdFU6IEFjdGl2
       - name: view
         in: path
         schema:
@@ -545,7 +555,7 @@ paths:
                       type: string
                 chat_channel_membership:
                   type: object
-                  example: '{"membership_id"=>"142", "role"=>"member"}'
+                  example: '{"membership_id"=>"139", "role"=>"member"}'
                   properties:
                     membership_id:
                       type: string
@@ -565,8 +575,7 @@ paths:
                       type: string
                 follows:
                   type: array
-                  example: '[{"id"=>"55", "explicit_points"=>"3.0"}, {"id"=>"56",
-                    "explicit_points"=>"10.0"}]'
+                  example: '[{"id"=>"57", "explicit_points"=>"3.0"}]'
                   items:
                     type: string
                 format:
@@ -582,13 +591,13 @@ paths:
                       type: string
                 response_template:
                   type: object
-                  example: '{"title"=>"The Golden Bowl22"}'
+                  example: '{"content_type"=>"html"}'
                   properties:
-                    title:
+                    content_type:
                       type: string
                 slug:
                   type: string
-                  example: vile-bodies248-4b69
+                  example: those-barren-leaves-thrones-dominations248-21ih
                 tag:
                   type: object
                   example: '{"text_color_hex"=>"", "bg_color_hex"=>""}'
@@ -633,7 +642,7 @@ paths:
         in: path
         schema:
           type: string
-          example: '275'
+          example: '270'
         required: true
       - name: comment_id
         in: path
@@ -645,7 +654,7 @@ paths:
         in: path
         schema:
           type: string
-          example: '5'
+          example: '6'
         required: true
     post:
       responses:
@@ -706,7 +715,8 @@ paths:
               properties:
                 article:
                   type: object
-                  example: '{"body_markdown"=>"", "title"=>"That Good Night"}'
+                  example: '{"body_markdown"=>"", "title"=>"The Heart Is a Lonely
+                    Hunter"}'
                   properties:
                     body_markdown:
                       type: string
@@ -714,7 +724,7 @@ paths:
                       type: string
                 classified_listing:
                   type: object
-                  example: '{"title"=>"Title", "category"=>"cfp", "listing_category"=>{"id"=>64,
+                  example: '{"title"=>"Title", "category"=>"cfp", "listing_category"=>{"id"=>53,
                     "cost"=>5, "created_at"=>"2021-'
                   properties:
                     title:
@@ -725,7 +735,7 @@ paths:
                       type: object
                 followable_id:
                   type: integer
-                  example: '2038'
+                  example: '1671'
                 followable_type:
                   type: string
                   example: User
@@ -734,8 +744,8 @@ paths:
                   example: json
                 github_repo:
                   type: string
-                  example: '{"id":22,"additional_note":null,"bytes_size":10279,"created_at":null,"description":"To
-                    Sail Beyond t'
+                  example: '{"id":22,"additional_note":null,"bytes_size":40858,"created_at":null,"description":"The
+                    World, the F'
                 listing:
                   type: object
                   example: '{"title"=>"Title", "body_markdown"=>"Markdown text", "category"=>"cfp"}'
@@ -778,7 +788,7 @@ paths:
                   example: "[FILTERED]"
                 app_bundle:
                   type: string
-                  example: schimmel.corkery.net
+                  example: labadie.leannon.info
                 approved:
                   type: string
                   example: 'true'
@@ -787,7 +797,7 @@ paths:
                   example: "[FILTERED]"
                 author_id:
                   type: string
-                  example: '576'
+                  example: '212'
                 badge:
                   type: string
                   example: not-27hello-2c-world-21-27
@@ -796,7 +806,7 @@ paths:
                   example: "[Click here!](https://example.com)"
                 category:
                   type: string
-                  example: like
+                  example: thumbsup
                 channel_name:
                   type: string
                   example: hey hey hey hey
@@ -810,7 +820,7 @@ paths:
                       type: string
                 chat_channel_id:
                   type: string
-                  example: '110'
+                  example: '106'
                 chat_channel_membership:
                   type: object
                   example: '{"user_action"=>"accept"}'
@@ -819,7 +829,7 @@ paths:
                       type: string
                 chat_id:
                   type: string
-                  example: '171'
+                  example: '167'
                 comment:
                   type: object
                   example: '{"body_markdown"=>"hi"}'
@@ -841,7 +851,7 @@ paths:
                   example: '22'
                 credit:
                   type: object
-                  example: '{"number_to_purchase"=>"25"}'
+                  example: '{"number_to_purchase"=>"20"}'
                   properties:
                     number_to_purchase:
                       type: string
@@ -852,7 +862,7 @@ paths:
                   type: string
                 data:
                   type: object
-                  example: '{"email"=>"person1700@example.com", "list_id"=>"1234"}'
+                  example: '{"email"=>"person1695@example.com", "list_id"=>"1234"}'
                   properties:
                     email:
                       type: string
@@ -873,7 +883,7 @@ paths:
                 event:
                   type: object
                   example: '{"title"=>"Hello, world!", "description_markdown"=>"This
-                    is an event", "starts_at"=>"2021-05-22 16:5'
+                    is an event", "starts_at"=>"2021-05-24 01:4'
                   properties:
                     title:
                       type: string
@@ -900,7 +910,7 @@ paths:
                       type: string
                 feedback_message_id:
                   type: string
-                  example: '11'
+                  example: '4'
                 force:
                   type: string
                 group:
@@ -925,11 +935,11 @@ paths:
                   type: string
                 membership_id:
                   type: string
-                  example: '125'
+                  example: '122'
                 message:
                   type: object
-                  example: '{"message_markdown"=>"hi", "user_id"=>"2154", "temp_id"=>"sd78jdssd",
-                    "chat_channel_id"=>"214"}'
+                  example: '{"message_markdown"=>"hi", "user_id"=>"1786", "temp_id"=>"sd78jdssd",
+                    "chat_channel_id"=>"210"}'
                   properties:
                     message_markdown:
                       type: string
@@ -957,25 +967,25 @@ paths:
                       type: string
                 noteable_id:
                   type: string
-                  example: '13'
+                  example: '6'
                 noteable_type:
                   type: string
                   example: FeedbackMessage
                 org_id:
                   type: string
-                  example: '321'
+                  example: '282'
                 org_secret:
                   type: string
                   example: "[FILTERED]"
                 organization:
                   type: object
-                  example: '{"id"=>"353"}'
+                  example: '{"id"=>"314"}'
                   properties:
                     id:
                       type: string
                 organization_id:
                   type: string
-                  example: '46'
+                  example: '7'
                 password:
                   type: string
                   example: "[FILTERED]"
@@ -990,7 +1000,7 @@ paths:
                   example: ios
                 podcast:
                   type: object
-                  example: '{"user_id"=>"685"}'
+                  example: '{"user_id"=>"321"}'
                   properties:
                     user_id:
                       type: string
@@ -1032,7 +1042,7 @@ paths:
                       type: string
                 profile_pin:
                   type: object
-                  example: '{"pinnable_id"=>"618"}'
+                  example: '{"pinnable_id"=>"613"}'
                   properties:
                     pinnable_id:
                       type: string
@@ -1041,7 +1051,7 @@ paths:
                   example: 'true'
                 rating_vote:
                   type: object
-                  example: '{"article_id"=>"628", "group"=>"experience_level", "rating"=>"3.0"}'
+                  example: '{"article_id"=>"622", "group"=>"experience_level", "rating"=>"3.0"}'
                   properties:
                     article_id:
                       type: string
@@ -1128,7 +1138,7 @@ paths:
                   example: Computer things
                 sponsorship:
                   type: object
-                  example: '{"user_id"=>"776", "organization_id"=>"87", "level"=>"gold",
+                  example: '{"user_id"=>"412", "organization_id"=>"48", "level"=>"gold",
                     "status"=>"live", "expires_at"=>"2021-0'
                   properties:
                     user_id:
@@ -1195,7 +1205,7 @@ paths:
                   example: Welcome
                 user:
                   type: object
-                  example: '{"email"=>"hey178@email.co", "name"=>"Roger 117"}'
+                  example: '{"email"=>"hey494@email.co", "name"=>"Roger 909"}'
                   properties:
                     email:
                       type: string
@@ -1206,13 +1216,13 @@ paths:
                   example: decline
                 user_block:
                   type: object
-                  example: '{"blocked_id"=>"2982"}'
+                  example: '{"blocked_id"=>"2616"}'
                   properties:
                     blocked_id:
                       type: string
                 user_id:
                   type: string
-                  example: '925'
+                  example: '561'
                 usernames:
                   type: string
                   example: username19, username20
@@ -1223,8 +1233,8 @@ paths:
                     type: string
                 webhook_endpoint:
                   type: object
-                  example: '{"source"=>"stackbit", "target_url"=>"https://wolff.io/leonardo.mosciski",
-                    "events"=>["article_creat'
+                  example: '{"source"=>"stackbit", "target_url"=>"https://hirthe-wisoky.net/filiberto.kulas",
+                    "events"=>["articl'
                   properties:
                     source:
                       type: string
@@ -1241,7 +1251,7 @@ paths:
                   example: '1'
                 image:
                   type: array
-                  example: "[#<ActionDispatch::Http::UploadedFile:0x00007f4234744168
+                  example: "[#<ActionDispatch::Http::UploadedFile:0x00007fb371c9bb58
                     @tempfile=#<Tempfile: (closed)>, @original_"
                   items:
                     type: string
@@ -1250,13 +1260,13 @@ paths:
         in: path
         schema:
           type: string
-          example: '8'
+          example: '4'
         required: true
       - name: notifiable_id
         in: path
         schema:
           type: string
-          example: '536'
+          example: '531'
         required: true
       - name: notifiable_type
         in: path
@@ -1274,7 +1284,7 @@ paths:
         in: path
         schema:
           type: string
-          example: '101'
+          example: '66'
         required: true
     put:
       responses:
@@ -1334,7 +1344,7 @@ paths:
               properties:
                 article:
                   type: object
-                  example: '{"title"=>"The Wives of Bath", "body_markdown"=>"Yo ho
+                  example: '{"title"=>"A Darkling Plain", "body_markdown"=>"Yo ho
                     ho", "series"=>"a series"}'
                   properties:
                     title:
@@ -1361,7 +1371,7 @@ paths:
                   example: 'true'
                 app_bundle:
                   type: string
-                  example: gusikowski-raynor.torphy.io
+                  example: ferry.kulas.info
                 approved:
                   type: string
                   example: 'true'
@@ -1420,9 +1430,17 @@ paths:
                   properties:
                     name:
                       type: string
+                organization:
+                  type: object
+                  example: '{"id"=>"417", "text_color_hex"=>"#111111"}'
+                  properties:
+                    id:
+                      type: string
+                    text_color_hex:
+                      type: string
                 organization_id:
                   type: string
-                  example: '48'
+                  example: '9'
                 placement_area:
                   type: string
                   example: sidebar_left
@@ -1464,22 +1482,20 @@ paths:
                   example: Computer things
                 sponsorship:
                   type: object
-                  example: '{"status"=>"live", "expires_at"=>"2021-06-22 16:58:31
-                    -0500", "blurb_html"=>"The Needle''s Eye"}'
+                  example: '{"status"=>"super-live", "expires_at"=>"2021-06-24 01:46:07
+                    +0300"}'
                   properties:
                     status:
                       type: string
                     expires_at:
-                      type: string
-                    blurb_html:
                       type: string
                 status:
                   type: string
                   example: confirmedsssss
                 tag:
                   type: object
-                  example: '{"short_summary"=>"Mlkshk wolf bushwick franzen humblebrag
-                    next level carry."}'
+                  example: '{"short_summary"=>"Mumblecore distillery wolf irony beard
+                    church-key bicycle rights."}'
                   properties:
                     short_summary:
                       type: string
@@ -1499,15 +1515,6 @@ paths:
             schema:
               type: object
               properties:
-                organization:
-                  type: object
-                  example: '{"id"=>"357", "profile_image"=>#<ActionDispatch::Http::UploadedFile:0x00007f421790f488
-                    @tempfile=#<T'
-                  properties:
-                    id:
-                      type: string
-                    profile_image:
-                      type: actiondispatch::http::uploadedfile
                 podcast:
                   type: object
                   example: '{"title"=>"hello", "feed_url"=>"https://pod.example.com/rss.rss",
@@ -1548,7 +1555,7 @@ paths:
         in: path
         schema:
           type: string
-          example: '19'
+          example: '9'
         required: true
   "/.well-known/apple-app-site-association":
     get:
@@ -1652,7 +1659,6 @@ paths:
           content:
             text/html: {}
           description: OK
-      description: new
       parameters:
       - name: forem_owner_secret
         in: query

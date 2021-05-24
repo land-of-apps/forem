@@ -2,7 +2,7 @@
 openapi: 3.0.1
 info:
   title: Forem Server API
-  version: generated-967c65557
+  version: generated-c8e49e3e2
 paths:
   "/":
     delete:
@@ -127,6 +127,10 @@ paths:
         schema:
           type: string
       - name: access_token
+        in: query
+        schema:
+          type: string
+      - name: approved
         in: query
         schema:
           type: string
@@ -363,9 +367,10 @@ paths:
         schema:
           type: string
       - name: timeframe
-        in: query
+        in: path
         schema:
           type: string
+        required: true
       - name: to
         in: query
         schema:
@@ -396,6 +401,10 @@ paths:
         schema:
           type: string
         required: true
+      - name: ut
+        in: query
+        schema:
+          type: string
       - name: view
         in: path
         schema:
@@ -472,7 +481,7 @@ paths:
                 response_template:
                   type: object
                   properties:
-                    title:
+                    content_type:
                       type: string
                 slug:
                   type: string
@@ -1137,6 +1146,13 @@ paths:
                   properties:
                     name:
                       type: string
+                organization:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    text_color_hex:
+                      type: string
                 organization_id:
                   type: string
                 placement_area:
@@ -1174,8 +1190,6 @@ paths:
                       type: string
                     expires_at:
                       type: string
-                    blurb_html:
-                      type: string
                 status:
                   type: string
                 tag:
@@ -1196,13 +1210,6 @@ paths:
             schema:
               type: object
               properties:
-                organization:
-                  type: object
-                  properties:
-                    id:
-                      type: string
-                    profile_image:
-                      type: actiondispatch::http::uploadedfile
                 podcast:
                   type: object
                   properties:
