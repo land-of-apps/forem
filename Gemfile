@@ -139,7 +139,7 @@ end
 
 group :development, :test do
   gem "amazing_print", "~> 1.3" # Great Ruby debugging companion: pretty print Ruby objects to visualize their structure
-  gem "appmap", "~> 0", github: "applandinc/appmap-ruby", branch: "account-for-bundle-path"
+  gem "appmap", "~> 0", github: "applandinc/appmap-ruby", branch: "fix-bundle-path-and-exception-messages"
   gem "appmap_depends", "~> 0", github: "applandinc/appmap_depends-ruby", branch: "main"
   gem "appmap_swagger", "~> 0", github: "applandinc/appmap_swagger-ruby", branch: "main"
   gem "bullet", "~> 6.1" # help to kill N+1 queries and unused eager loading

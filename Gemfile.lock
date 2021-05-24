@@ -1,7 +1,7 @@
 GIT
   remote: https://github.com/applandinc/appmap-ruby.git
-  revision: 24db4c998b2eb787cd790ba46c9329c5e38f936c
-  branch: account-for-bundle-path
+  revision: 07dfe43f592343ec521ebf260903debea580a0f9
+  branch: fix-bundle-path-and-exception-messages
   specs:
     appmap (0.48.0)
       activesupport
