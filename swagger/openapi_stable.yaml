@@ -2,7 +2,7 @@
 openapi: 3.0.1
 info:
   title: Forem Server API
-  version: generated-c8e49e3e2
+  version: generated-c353d8411
 paths:
   "/":
     delete:
@@ -36,6 +36,12 @@ paths:
                   properties:
                     username_string:
                       type: string
+                commit:
+                  type: string
+                delete__account__username__field:
+                  type: string
+                delete__account__verification__field:
+                  type: string
                 format:
                   type: string
                 locale:
@@ -66,6 +72,8 @@ paths:
                     blocked_id:
                       type: string
                 user_id:
+                  type: string
+                utf8:
                   type: string
       parameters:
       - name: blocked_id
@@ -169,6 +177,18 @@ paths:
         in: query
         schema:
           type: string
+      - name: commentable_id
+        in: query
+        schema:
+          type: string
+      - name: commentable_type
+        in: query
+        schema:
+          type: string
+      - name: commit
+        in: query
+        schema:
+          type: string
       - name: confirmation_token
         in: query
         schema:
@@ -179,6 +199,10 @@ paths:
           type: string
         required: true
       - name: filter
+        in: query
+        schema:
+          type: string
+      - name: filters
         in: query
         schema:
           type: string
@@ -232,6 +256,10 @@ paths:
         schema:
           type: string
         required: true
+      - name: offset
+        in: query
+        schema:
+          type: string
       - name: onboarding
         in: query
         schema:
@@ -266,6 +294,10 @@ paths:
         in: query
         schema:
           type: string
+      - name: preview
+        in: query
+        schema:
+          type: string
       - name: previous_content
         in: query
         schema:
@@ -284,6 +316,13 @@ paths:
       - name: q
         in: query
         schema:
+          type: object
+          properties:
+            channel_name_cont:
+              type: string
+      - name: referrer
+        in: query
+        schema:
           type: string
       - name: search
         in: query
@@ -298,6 +337,14 @@ paths:
         schema:
           type: string
         required: true
+      - name: signature
+        in: query
+        schema:
+          type: string
+      - name: signin
+        in: query
+        schema:
+          type: string
       - name: sitemap
         in: path
         schema:
@@ -367,10 +414,9 @@ paths:
         schema:
           type: string
       - name: timeframe
-        in: path
+        in: query
         schema:
           type: string
-        required: true
       - name: to
         in: query
         schema:
@@ -393,15 +439,20 @@ paths:
         schema:
           type: string
       - name: user_id
-        in: query
+        in: path
         schema:
           type: string
+        required: true
       - name: username
         in: path
         schema:
           type: string
         required: true
       - name: ut
+        in: query
+        schema:
+          type: string
+      - name: utf8
         in: query
         schema:
           type: string
@@ -424,6 +475,9 @@ paths:
         '302':
           content:
             text/html: {}
+        '400':
+          content:
+            text/html: {}
         '401':
           content:
             application/json: {}
@@ -444,6 +498,8 @@ paths:
                   properties:
                     approved:
                       type: string
+                authenticity_token:
+                  type: string
                 chat_channel:
                   type: object
                   properties:
@@ -456,6 +512,13 @@ paths:
                       type: string
                     role:
                       type: string
+                comment:
+                  type: object
+                  properties:
+                    body_markdown:
+                      type: string
+                commit:
+                  type: string
                 credit_action:
                   type: string
                 credits:
@@ -465,6 +528,8 @@ paths:
                   properties:
                     live_now:
                       type: string
+                file:
+                  type: string
                 follows:
                   type: array
                   items:
@@ -481,16 +546,38 @@ paths:
                 response_template:
                   type: object
                   properties:
-                    content_type:
+                    title:
                       type: string
                 slug:
                   type: string
                 tag:
                   type: object
                   properties:
-                    text_color_hex:
+                    supported:
+                      type: string
+                    badge_id:
+                      type: string
+                    category:
+                      type: string
+                    social_preview_template:
+                      type: string
+                    alias_for:
+                      type: string
+                    pretty_name:
+                      type: string
+                    requires_approval:
+                      type: string
+                    short_summary:
+                      type: string
+                    rules_markdown:
+                      type: string
+                    submission_template:
+                      type: string
+                    wiki_body_markdown:
                       type: string
                     bg_color_hex:
+                      type: string
+                    text_color_hex:
                       type: string
                 user:
                   type: object
@@ -500,6 +587,8 @@ paths:
                     note_for_current_role:
                       type: string
                 username:
+                  type: string
+                utf8:
                   type: string
           multipart/form-data:
             schema:
@@ -518,6 +607,64 @@ paths:
                       type: string
                     badge_image:
                       type: actiondispatch::http::uploadedfile
+                organization:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    name:
+                      type: string
+                    slug:
+                      type: string
+                    twitter_username:
+                      type: string
+                    github_username:
+                      type: string
+                    url:
+                      type: string
+                    tag_line:
+                      type: string
+                    summary:
+                      type: string
+                    bg_color_hex:
+                      type: string
+                    text_color_hex:
+                      type: string
+                    location:
+                      type: string
+                    email:
+                      type: string
+                    company_size:
+                      type: string
+                    story:
+                      type: string
+                    tech_stack:
+                      type: string
+                    cta_body_markdown:
+                      type: string
+                    cta_button_text:
+                      type: string
+                    cta_button_url:
+                      type: string
+                page:
+                  type: object
+                  properties:
+                    title:
+                      type: string
+                    slug:
+                      type: string
+                    description:
+                      type: string
+                    template:
+                      type: string
+                    body_markdown:
+                      type: string
+                    body_html:
+                      type: string
+                    body_json:
+                      type: string
+                    is_top_level_path:
+                      type: string
       parameters:
       - name: article_id
         in: path
@@ -586,6 +733,10 @@ paths:
                       type: string
                     title:
                       type: string
+                    published:
+                      type: boolean
+                article_body:
+                  type: string
                 classified_listing:
                   type: object
                   properties:
@@ -674,6 +825,8 @@ paths:
                   properties:
                     body_markdown:
                       type: string
+                commit:
+                  type: string
                 config:
                   type: string
                 confirmation:
@@ -897,6 +1050,8 @@ paths:
                   properties:
                     article_update:
                       type: string
+                    comment_creation:
+                      type: string
                 settings_user_experience:
                   type: object
                   properties:
@@ -988,6 +1143,8 @@ paths:
                   type: array
                   items:
                     type: string
+                utf8:
+                  type: string
                 webhook_endpoint:
                   type: object
                   properties:
@@ -1001,12 +1158,45 @@ paths:
             schema:
               type: object
               properties:
+                authenticity_token:
+                  type: string
+                category:
+                  type: string
+                events_json:
+                  type: string
                 i_am_owner:
                   type: string
                 image:
                   type: array
                   items:
                     type: string
+                organization:
+                  type: object
+                  properties:
+                    name:
+                      type: string
+                    slug:
+                      type: string
+                    profile_image:
+                      type: actiondispatch::http::uploadedfile
+                    twitter_username:
+                      type: string
+                    github_username:
+                      type: string
+                    bg_color_hex:
+                      type: string
+                    text_color_hex:
+                      type: string
+                    url:
+                      type: string
+                    summary:
+                      type: string
+                    proof:
+                      type: string
+                reactable_id:
+                  type: string
+                reactable_type:
+                  type: string
       parameters:
       - name: id
         in: path
@@ -1243,6 +1433,45 @@ paths:
                       type: string
                     published:
                       type: string
+                profile:
+                  type: object
+                  properties:
+                    display_email_on_profile:
+                      type: string
+                    website_url:
+                      type: string
+                    summary:
+                      type: string
+                    location:
+                      type: string
+                    brand_color2:
+                      type: string
+                    brand_color1:
+                      type: string
+                    skills_languages:
+                      type: string
+                    currently_learning:
+                      type: string
+                    currently_hacking_on:
+                      type: string
+                    available_for:
+                      type: string
+                    imaginary_ice_cream_flavor:
+                      type: string
+                    hate_ice_cream_flavor:
+                      type: string
+                    preferred_ice_cream_flavor:
+                      type: string
+                    employer_url:
+                      type: string
+                    education:
+                      type: string
+                    employer_name:
+                      type: string
+                    employment_title:
+                      type: string
+                utf8:
+                  type: string
       parameters:
       - name: id
         in: path
@@ -1255,6 +1484,17 @@ paths:
         '200':
           content:
             application/json: {}
+  "/confirm-email":
+    get:
+      responses:
+        '200':
+          content:
+            text/html: {}
+      parameters:
+      - name: email
+        in: query
+        schema:
+          type: string
   "/enter":
     get:
       responses:
@@ -1298,13 +1538,17 @@ paths:
             application/json: {}
       requestBody:
         content:
-          application/x-www-form-urlencoded:
+          multipart/form-data:
             schema:
               type: object
               properties:
+                commit:
+                  type: string
                 user:
                   type: object
                   properties:
+                    profile_image:
+                      type: actiondispatch::http::uploadedfile
                     name:
                       type: string
                     username:
@@ -1315,6 +1559,69 @@ paths:
                       type: string
                     password_confirmation:
                       type: string
+                utf8:
+                  type: string
+  "/users/auth/apple":
+    get:
+      responses:
+        '302':
+          content: {}
+  "/users/auth/apple/callback":
+    get:
+      responses:
+        '302':
+          content: {}
+  "/users/auth/facebook":
+    get:
+      responses:
+        '302':
+          content: {}
+  "/users/auth/facebook/callback":
+    get:
+      responses:
+        '302':
+          content: {}
+  "/users/auth/github":
+    get:
+      responses:
+        '302':
+          content: {}
+  "/users/auth/github/callback":
+    get:
+      responses:
+        '302':
+          content: {}
+  "/users/auth/twitter":
+    get:
+      responses:
+        '302':
+          content: {}
+  "/users/auth/twitter/callback":
+    get:
+      responses:
+        '302':
+          content: {}
+  "/users/confirmation":
+    post:
+      responses:
+        '200':
+          content:
+            text/html: {}
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                commit:
+                  type: string
+                user:
+                  type: object
+                  properties:
+                    email:
+                      type: string
+                utf8:
+                  type: string
   "/users/invitation/accept":
     get:
       responses:
@@ -1325,12 +1632,72 @@ paths:
         in: query
         schema:
           type: string
+  "/users/password":
+    post:
+      responses:
+        '302':
+          content: {}
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                commit:
+                  type: string
+                user:
+                  type: object
+                  properties:
+                    email:
+                      type: string
+                utf8:
+                  type: string
+  "/users/password/new":
+    get:
+      responses:
+        '200':
+          content:
+            text/html: {}
+  "/users/sign_in":
+    get:
+      responses:
+        '200':
+          content:
+            text/html: {}
+    post:
+      responses:
+        '200':
+          content:
+            text/html: {}
+        '302':
+          content: {}
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                commit:
+                  type: string
+                user:
+                  type: object
+                  properties:
+                    email:
+                      type: string
+                    password:
+                      type: string
+                    remember_me:
+                      type: string
+                utf8:
+                  type: string
   "/users/sign_up":
     get:
       responses:
         '200':
           content:
             text/html: {}
+        '302':
+          content: {}
       parameters:
       - name: forem_owner_secret
         in: query
