@@ -55,10 +55,18 @@ namespace :appmap do
         next
       end
 
+      start_time = Time.current
+      succeeded = nil
       AppMap::Depends.run_tests(@appmap_modified_files) do |test_files|
         require "shellwords"
-        system({ "RAILS_ENV" => "test", "APPMAP" => "true" },
-"bundle exec rspec --format Fuubar #{test_files.map(&:shellescape).join(' ')}")
+        file_list = test_files.map(&:shellescape).join(" ")
+        succeeded = true if system({ "RAILS_ENV" => "test", "APPMAP" => "true" },
+          "bundle exec rspec --format documentation -t '~empty' -t '~large' -t '~unstable' #{file_list}")
+      end
+      if succeeded
+        warn "Tests succeeded - removing out of date AppMaps."
+        removed = AppMap::Depends.remove_out_of_date_appmaps(start_time)
+        warn "Removed out of date AppMaps: #{removed.join(' ')}" unless removed.empty?
       end
     end
 
@@ -67,7 +75,7 @@ namespace :appmap do
 
     # TODO: add :swagger, :"swagger:uptodate"
     desc "Bring AppMaps up to date with file modifications relative to the base branch"
-    task :diff, [:base] => %i[depends:diff test_depends]
+    task :diff, %i[base] => %i[depends:diff test_depends]
   end
 
   if %w[test development].member?(Rails.env)
