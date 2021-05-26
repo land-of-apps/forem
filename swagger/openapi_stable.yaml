@@ -2,7 +2,7 @@
 openapi: 3.0.1
 info:
   title: Forem Server API
-  version: generated-c353d8411
+  version: generated-928b00c52
 paths:
   "/":
     delete:
@@ -548,6 +548,8 @@ paths:
                   properties:
                     title:
                       type: string
+                    content_type:
+                      type: string
                 slug:
                   type: string
                 tag:
@@ -1040,6 +1042,8 @@ paths:
                   properties:
                     community_emoji:
                       type: string
+                    community_description:
+                      type: string
                 settings_general:
                   type: object
                   properties:
@@ -1396,10 +1400,21 @@ paths:
                   properties:
                     add_credits:
                       type: string
+                    add_org_credits:
+                      type: string
+                    organization_id:
+                      type: string
           multipart/form-data:
             schema:
               type: object
               properties:
+                organization:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                    profile_image:
+                      type: actiondispatch::http::uploadedfile
                 podcast:
                   type: object
                   properties:
