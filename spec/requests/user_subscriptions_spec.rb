@@ -130,22 +130,6 @@ RSpec.describe "UserSubscriptions", type: :request do
       expect(response.parsed_body["error"]).to include("Subscriber has already been taken")
     end
 
-    # TODO: [@forem/delightful]: re-enable this once email confirmation is re-enabled
-    xit "returns an error for an email mismatch" do
-      article = create(:article, :with_user_subscription_tag_role_user, with_user_subscription_tag: true)
-      invalid_source_attributes = { source_type: article.class_name, source_id: article.id,
-                                    subscriber_email: "old_email@test.com" }
-
-      expect do
-        post user_subscriptions_path,
-             headers: { "Content-Type" => "application/json" },
-             params: { user_subscription: invalid_source_attributes }.to_json
-      end.to change(UserSubscription, :count).by(0)
-
-      expect(response).to have_http_status(:unprocessable_entity)
-      expect(response.parsed_body["error"]).to include("Subscriber email mismatch.")
-    end
-
     it "returns an error for a subscriber that signed up with Apple" do
       allow(user).to receive(:email).and_return("test@privaterelay.appleid.com")
       article = create(:article, :with_user_subscription_tag_role_user, with_user_subscription_tag: true)
