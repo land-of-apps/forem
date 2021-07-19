@@ -30,7 +30,7 @@ RSpec.describe Admin::ModeratorsQuery, type: :query do
       it { is_expected.to match_array([user3]) }
     end
 
-    context "when state is potential" do
+    context "when state is potential", large: true do
       let(:options) { { state: "potential" } }
 
       it { is_expected.to match_array([user4, user6, user3]) }

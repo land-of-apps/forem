@@ -11,13 +11,13 @@ RSpec.describe Admin::UsersQuery, type: :query do
   let!(:user6) { create(:user, :super_admin, name: "Jean") }
 
   describe ".call" do
-    context "when no arguments are given" do
+    context "when no arguments are given", large: true do
       it "returns all users" do
         expect(described_class.call).to eq([user6, user5, user4, user3, user2, user])
       end
     end
 
-    context "when search is set" do
+    context "when search is set", large: true do
       let(:options) { { search: "greg" } }
 
       it { is_expected.to eq([user2, user]) }

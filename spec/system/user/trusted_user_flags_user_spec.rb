@@ -34,7 +34,7 @@ RSpec.describe "Flagging users from profile pages", type: :system, js: true do
   end
 
   context "when signed in as a trusted user" do
-    it "allows toggling the flagged status" do
+    it "allows toggling the flagged status", unstable: true do
       sign_in create(:user, :trusted)
 
       visit user_profile_path(user.username)

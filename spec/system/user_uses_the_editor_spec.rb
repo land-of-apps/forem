@@ -96,7 +96,7 @@ RSpec.describe "Using the editor", type: :system do
   end
 
   describe "using v2 editor", js: true do
-    it "fill out form with rich content and click publish" do
+    it "fill out form with rich content and click publish", unstable: true do
       visit "/new"
       fill_in "article-form-title", with: "This is a test"
       fill_in "tag-input", with: "What, Yo"
