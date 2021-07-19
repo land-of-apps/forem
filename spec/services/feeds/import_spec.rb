@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe Feeds::Import, type: :service, vcr: true do
+RSpec.describe Feeds::Import, type: :service, vcr: true, large: true do
   let(:link) { "https://medium.com/feed/@vaidehijoshi" }
   let(:nonmedium_link) { "https://circleci.com/blog/feed.xml" }
   let(:nonpermanent_link) { "https://medium.com/feed/@macsiri/" }

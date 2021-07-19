@@ -4,6 +4,11 @@ git_source(:github) { |name| "https://github.com/#{name}.git" }
 source "https://rubygems.org"
 ruby File.read(File.join(File.dirname(__FILE__), ".ruby-version")).strip
 
+group :development, :test do
+  gem "appmap", "~> 0.60.0"
+  gem "rdoc", "~> 6.3.2"
+end
+
 group :production do
   gem "hypershield", "~> 0.2.2" # Allow admins to query data via internal
   gem "nakayoshi_fork", "~> 0.0.4" # solves CoW friendly problem on MRI 2.2 and later
