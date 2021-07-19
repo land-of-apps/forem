@@ -2,10 +2,10 @@ version: "3"
 services:
   rails:
     image: quay.io/forem/forem:development
-    container_name: forem_rails
+    container_name: forem_904d98_rails
     user: root
     ports:
-      - "3000:3000"
+      - "3000"
     depends_on:
       - bundle
       - db
@@ -20,15 +20,58 @@ services:
       RACK_TIMEOUT_WAIT_TIMEOUT: 10000
       RACK_TIMEOUT_SERVICE_TIMEOUT: 10000
       STATEMENT_TIMEOUT: 10000
-      APP_DOMAIN: localhost:3000
+      WEB_CONCURRENCY: 0
+      APP_PROTOCOL: http://
+      APP_DOMAIN: rails
     volumes:
       - .:/opt/apps/forem:delegated
     entrypoint: ["dockerize", "-wait", "tcp://db:5432", "-wait", "tcp://redis:6379", "-wait", "file:///opt/apps/forem/vendor/bundle/.bundle_finished", "-timeout", "2700s", "-wait-retry-interval", "10s"]
     command: [ "bash", "-c", "./scripts/entrypoint.sh bootstrap && bundle exec rails server -b 0.0.0.0 -p 3000"]
 
+  rails_test:
+    image: quay.io/forem/forem:development
+    container_name: forem_904d98_test
+    user: root
+    depends_on:
+      - bundle
+      - db
+      - redis
+      - yarn
+    environment:
+      RAILS_ENV: test
+      NODE_ENV: development
+      DATABASE_URL: postgresql://forem:forem@db:5432/PracticalDeveloper_development
+      DATABASE_URL_TEST: postgresql://forem:forem@db:5432/PracticalDeveloper_test
+      DATABASE_NAME_TEST: PracticalDeveloper_test
+      REDIS_SESSIONS_URL: redis://redis:6379
+      REDIS_SIDEKIQ_URL: redis://redis:6379
+      REDIS_URL: redis://redis:6379
+      REDIS_RPUSH_URL: redis://redis:6379
+      RACK_TIMEOUT_WAIT_TIMEOUT: 10000
+      RACK_TIMEOUT_SERVICE_TIMEOUT: 10000
+      STATEMENT_TIMEOUT: 10000
+      RAILS_MAX_THREADS: 5
+      WEB_CONCURRENCY: 0
+      FOREM_OWNER_SECRET: secret
+      COMMUNITY_NAME: DEV(local)
+      DEFAULT_EMAIL: yo@dev.to
+      SESSION_KEY: _Dev_Community_Session
+      SESSION_EXPIRY_SECONDS: 1209600
+      RACK_TIMEOUT_WAIT_TIMEOUT: 100_000
+      RACK_TIMEOUT_SERVICE_TIMEOUT: 100_000
+      APP_PROTOCOL: http://
+      APP_DOMAIN: localhost
+      OPENRESTY_URL: ''
+      FORCE_SSL_IN_RAILS: not applicable in dev
+      SETUP_COMMAND: "bundle exec rails db:create db:schema:load webpacker:compile"
+    volumes:
+      - .:/opt/apps/forem:delegated
+    entrypoint: ["dockerize", "-wait", "tcp://db:5432", "-wait", "tcp://redis:6379", "-wait", "file:///opt/apps/forem/vendor/bundle/.bundle_finished", "-timeout", "2700s", "-wait-retry-interval", "10s"]
+    command: [ "bash", "-i" ]
+
   bundle:
     image: quay.io/forem/forem:development
-    container_name: forem_bundle
+    container_name: forem_904d98_bundle
     user: root
     environment:
       RAILS_ENV: development
@@ -42,7 +85,7 @@ services:
 
   yarn:
     image: quay.io/forem/forem:development
-    container_name: forem_yarn
+    container_name: forem_904d98_yarn
     user: root
     environment:
       RAILS_ENV: development
@@ -56,7 +99,7 @@ services:
 
   webpacker:
     image: quay.io/forem/forem:development
-    container_name: forem_webpacker
+    container_name: forem_904d98_webpacker
     user: root
     depends_on:
       - bundle
@@ -75,7 +118,7 @@ services:
 
   seed:
     image: quay.io/forem/forem:development
-    container_name: forem_seed
+    container_name: forem_904d98_seed
     user: root
     depends_on:
       - rails
@@ -94,7 +137,7 @@ services:
 
   sidekiq:
     image: quay.io/forem/forem:development
-    container_name: forem_sidekiq
+    container_name: forem_904d98_sidekiq
     user: root
     depends_on:
       - rails
@@ -113,21 +156,21 @@ services:
 
   db:
     image: postgres:11-alpine
-    container_name: forem_postgresql
+    container_name: forem_904d98_postgresql
     environment:
       POSTGRES_USER: forem
       POSTGRES_PASSWORD: forem
       POSTGRES_DB: PracticalDeveloper_development
     ports:
-      - "5432:5432"
+      - "5432"
     volumes:
       - db_data:/var/lib/postgresql/data:delegated
 
   redis:
     image: redis:6.0.9-alpine
-    container_name: forem_redis
+    container_name: forem_904d98_redis
     ports:
-      - "6379:6379"
+      - "6379"
 
 volumes:
   db_data:
