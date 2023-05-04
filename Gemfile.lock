@@ -1,4 +1,15 @@
 GIT
+  remote: https://github.com/applandinc/appmap-ruby.git
+  revision: a625ab273ecf921b0e8dee66c68e60bdba503c49
+  branch: fix/stringify-signature-lookup-keys
+  specs:
+    appmap (0.99.1)
+      activesupport
+      method_source
+      rack
+      reverse_markdown
+
+GIT
   remote: https://github.com/forem/acts_as_follower.git
   revision: 06393d3693a1a3d4b390aec4976c8b8f3a81cf01
   branch: master
@@ -386,7 +397,7 @@ GEM
     httpclient (2.8.3)
     hypershield (0.2.2)
       activerecord (>= 5)
-    i18n (1.12.0)
+    i18n (1.13.0)
       concurrent-ruby (~> 1.0)
     i18n-js (3.9.2)
       i18n (>= 0.6.6)
@@ -501,7 +512,7 @@ GEM
     mini_histogram (0.3.1)
     mini_magick (4.11.0)
     mini_mime (1.1.2)
-    mini_portile2 (2.8.1)
+    mini_portile2 (2.8.2)
     minitest (5.18.0)
     modis (4.0.1)
       activemodel (>= 5.2)
@@ -611,7 +622,7 @@ GEM
       rspec-rails (>= 3.0.0)
     raabro (1.4.0)
     racc (1.6.2)
-    rack (2.2.6.4)
+    rack (2.2.7)
     rack-attack (6.6.1)
       rack (>= 1.0, < 3)
     rack-cors (1.1.1)
@@ -963,6 +974,7 @@ DEPENDENCIES
   ahoy_matey (~> 4.1)
   amazing_print (~> 1.4)
   ancestry (~> 4.2)
+  appmap!
   better_errors (~> 2.9)
   blazer (~> 2.6)
   bootsnap (>= 1.1.0)
