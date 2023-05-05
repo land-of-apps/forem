@@ -1,0 +1,20 @@
+name: forem
+language: ruby
+appmap_dir: tmp/appmap
+packages:
+  - path: app
+  - path: lib
+exclude:
+  - ReverseMarkdown::Converters::CustomText#convert
+  - RenderedMarkdownScrubber#allowed_node?
+  - RenderedMarkdownScrubber#scrub_attributes
+  - Html::Parser#parse_emojis
+compare:
+  filter:
+    hide_external: true
+    dependency_folders: [vendor]
+    hide_name:
+      - /^external-route:.*\bhttp:\/\/127\.0\.0\.1:\d+\/session\/[a-f0-9]{32,}\//
+      - /^query:[\s\S]*\bSAVEPOINT\b/
+      - /^query:[\s\S]*\bPRAGMA\b/,
+      - /^query:[\s\S]*\bpg_attribute\b/
