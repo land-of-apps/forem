@@ -1,6 +1,6 @@
 GIT
   remote: https://github.com/applandinc/appmap-ruby.git
-  revision: a625ab273ecf921b0e8dee66c68e60bdba503c49
+  revision: a139d1f862033094fbada4baf4c75caa8b4eca95
   branch: fix/stringify-signature-lookup-keys
   specs:
     appmap (0.99.1)
