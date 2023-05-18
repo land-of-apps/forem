@@ -1,9 +1,9 @@
 GIT
   remote: https://github.com/applandinc/appmap-ruby.git
-  revision: 80b95acc615d9cf5ed452395ec5da7424971d481
-  branch: fix/stringify-signature-lookup-keys
+  revision: 15d5b8d057ecacee9ab27832a9416ecb685fafe8
+  branch: master
   specs:
-    appmap (0.99.1)
+    appmap (0.99.4)
       activesupport
       method_source
       rack
@@ -1040,7 +1040,7 @@ DEPENDENCIES
   memory_profiler (~> 1.0)
   metainspector (~> 5.12)
   nakayoshi_fork (~> 0.0.4)
-  nokogiri (~> 1.13)
+  nokogiri (= 1.14.3)
   octokit (~> 5.2)
   oj (~> 3.13)
   omniauth (~> 2.1)
