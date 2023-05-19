@@ -4,7 +4,7 @@ git_source(:github) { |name| "https://github.com/#{name}.git" }
 source "https://rubygems.org"
 ruby File.read(File.join(File.dirname(__FILE__), ".ruby-version")).strip
 
-gem 'appmap', :groups => [:development, :test], github: 'applandinc/appmap-ruby', branch: 'fix/stringify-signature-lookup-keys'
+gem 'appmap', :groups => [:development, :test], github: 'applandinc/appmap-ruby', branch: 'master'
 
 group :production do
   gem "hypershield", "~> 0.2.2" # Allow admins to query data via internal
@@ -59,7 +59,7 @@ gem "kaminari", "~> 1.2" # A Scope & Engine based, clean, powerful, customizable
 gem "katex", "~> 0.9.0" # This rubygem enables you to render TeX math to HTML using KaTeX. It uses ExecJS under the hood
 gem "liquid", "~> 5.4" # A secure, non-evaling end user template engine with aesthetic markup
 gem "metainspector", "~> 5.12" # To get and parse website metadata for Open Graph rich objects
-gem "nokogiri", "~> 1.13" # HTML, XML, SAX, and Reader parser
+gem "nokogiri", "= 1.14.3" # HTML, XML, SAX, and Reader parser
 gem "octokit", "~> 5.2" # Simple wrapper for the GitHub API
 gem "oj", "~> 3.13" # JSON parser and object serializer
 gem "omniauth", "~> 2.1" # A generalized Rack framework for multiple-provider authentication
