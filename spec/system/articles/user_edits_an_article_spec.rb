@@ -22,7 +22,9 @@ RSpec.describe "Editing with an editor", js: true do
     expect(page).to have_text("Yooo")
   end
 
-  it "user updates their post" do
+  # 1st Try error in ./vendor/bundle/ruby/3.0.0/bundler/gems/appmap-ruby-15d5b8d057ec/lib/appmap/rspec.rb:248:
+  # expected to find text "Yooo" in "DEV(local)\nDEV(local)\nCreate Post\nEdit\nPreview\n Upload image\nYou are currently using the basic markdown editor that uses Jekyll front matter. You can also use the rich+markdown editor you can find in UX settings.\nEditor Basics\nUse Markdown to write and format posts.\nCommonly used syntax\nEmbed rich content such as Tweets, YouTube videos, etc. Use the complete URL: {% embed https://... %}. See a list of supported embeds.\nIn addition to images for the post's content, you can also drag and drop a cover image.\nSaving ...". (However, it was found 1 time including non-visible text.)
+  it "user updates their post", appmap: false do
     visit "/#{user.username}/#{article.slug}/edit"
     fill_in "article_body_markdown", with: template.gsub("Suspendisse", "Yooo")
     click_button("Save changes")
