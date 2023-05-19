@@ -1,4 +1,4 @@
-name: CI/CD
+name: AppMap archive
 
 on: [push]
 
@@ -191,14 +191,6 @@ jobs:
         with:
           revision: 0771a5cd2e6d01b5822c4d21c5f17114c42c8a23
           archive-count: 8
-
-      - name: Preflight
-        id: preflight
-        uses: ./github-actions/preflight
-        with:
-          base-revision: ${{ github.event.pull_request.base.sha }}
-          head-revision: 0771a5cd2e6d01b5822c4d21c5f17114c42c8a23
-          github-token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Decide whether the needed jobs succeeded or failed
         uses: re-actors/alls-green@release/v1
