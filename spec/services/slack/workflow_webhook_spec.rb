@@ -2,6 +2,7 @@ require "rails_helper"
 
 RSpec.describe Slack::WorkflowWebhook, type: :service do
   it "does nothing when missing SLACK_WORKFLOW_WEBHOOK_URL" do
+    allow(ENV).to receive(:[]).and_call_original
     allow(ENV).to receive(:[]).with("SLACK_WORKFLOW_WEBHOOK_URL").and_return(nil)
     allow(HTTParty).to receive(:post).and_call_original
 

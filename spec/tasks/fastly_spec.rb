@@ -4,6 +4,7 @@ RSpec.describe "Fastly tasks", type: :task do
   before do
     Rake.application["fastly:update_configs"].reenable
     allow(FastlyConfig::Update).to receive(:call)
+    allow(ENV).to receive(:[]).and_call_original
   end
 
   describe "#update_configs" do

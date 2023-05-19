@@ -2,6 +2,10 @@ require "rails_helper"
 require "cypress-rails/finds_bin"
 
 RSpec.describe CypressRails::FindsBin do
+  before do
+    allow(ENV).to receive(:[]).and_call_original
+  end
+
   describe ".call" do
     it "finds the bin file" do
       allow(ENV).to receive(:[]).with("KNAPSACK_PRO_CI_NODE_TOTAL").and_return(nil)
