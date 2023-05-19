@@ -1,0 +1,3 @@
+[submodule "github-actions/preflight"]
+	path = github-actions/preflight
+	url = https://github.com/getappmap/preflight-appmap-action
