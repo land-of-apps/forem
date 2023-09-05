@@ -10,7 +10,7 @@ namespace :partition do
     $LOAD_PATH.unshift "lib"
     $LOAD_PATH.unshift "test"
 
-    Dir["test/**/*_test.rb"].select.with_index { |_el, i| i % total == index }.each do |test_file|
+    Dir["spec/**/*_spec.rb"].select.with_index { |_el, i| i % total == index }.each do |test_file|
       load test_file
     end
   end
