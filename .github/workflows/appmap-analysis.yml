@@ -1,10 +1,13 @@
 name: AppMap Analysis
 
 on:
+  pull_request:
   push:
     branches:
-      - feat/appmap
-  
+      - main # Change this to the name of the mainline branch
+  schedule:
+    - cron: '0 0 * * 0'
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: ${{  github.ref != 'refs/heads/main' }}
@@ -144,6 +147,13 @@ jobs:
         uses: ruby/setup-ruby@v1
         with:
           bundler-cache: true
+
+      - name: Install AppMap tools
+        id: install-appmap
+        uses: getappmap/install-action@v1
+        with:
+          project-type: bundler
+
       - run: bundle exec rails db:test:prepare
       - name: RSpec
         env:
@@ -151,3 +161,17 @@ jobs:
           CI_NODE_INDEX: ${{ matrix.ci_node_index }}
         run: |
           ./bin/ci
+
+      - name: Save AppMaps
+        uses: actions/cache/save@v3
+        if: always()
+        with:
+          path: ${{ steps.install-appmap.outputs.appmap-dir }}
+          key: appmaps-${{ github.sha }}-${{ github.run_attempt }}
+
+  appmap-analysis:
+    if: always()
+    needs: [rspec] # You may need to change this to match the name of the step that runs your tests.
+    uses: getappmap/archive-action@v1
+    with:
+      revision: ${{ github.event.pull_request.base.sha }}
