@@ -172,6 +172,7 @@ jobs:
           key: appmaps-${{ github.sha }}-${{ github.run_attempt }}
 
   appmap-analysis:
+    if: always()
     runs-on: ubuntu-latest
     needs: [rspec]
     permissions:
