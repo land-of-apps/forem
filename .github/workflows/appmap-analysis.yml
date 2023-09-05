@@ -170,8 +170,33 @@ jobs:
           key: appmaps-${{ github.sha }}-${{ github.run_attempt }}
 
   appmap-analysis:
-    if: always()
-    needs: [rspec] # You may need to change this to match the name of the step that runs your tests.
-    uses: getappmap/archive-action@v1
-    with:
-      revision: ${{ github.event.pull_request.base.sha }}
+    runs-on: ubuntu-latest
+    needs: [rspec]
+    permissions:
+      contents: read
+      actions: read
+      checks: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Install AppMap tools
+        id: install-appmap
+        uses: getappmap/install-action@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          install-appmap-library: false
+
+      - name: Restore AppMaps
+        uses: actions/cache/restore@v3
+        with:
+          path: ${{ steps.install-appmap.outputs.appmap-dir }}
+          key: appmaps-${{ github.sha }}-${{ github.run_attempt }}
+      
+      - name: Archive AppMaps
+        uses: getappmap/archive-action@v1
+        with:
+          revision: ${{ github.event.pull_request.base.sha }}
