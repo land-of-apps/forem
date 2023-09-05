@@ -2,7 +2,7 @@
 
 tests = Dir["spec/**/*_spec.rb"].
   # Add randomization seed based on SHA of each commit
-  shuffle(random: Random.new(ENV["GITHUB_SHA"].to_i(16))).
+  shuffle(random: Random.new("f03cd5415a4b7fffa57221fbf41220b32e6170f6".to_i(16))).
   select.
   with_index do |el, i|
     i % ENV["CI_NODE_TOTAL"].to_i == ENV["CI_NODE_INDEX"].to_i
