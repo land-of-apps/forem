@@ -102,3 +102,5 @@ postcss_error.log
 # ripgrep ignore file
 .rgignore
 config/definitions.rb
+# Ignore AppMap archives and working files
+/.appmap
