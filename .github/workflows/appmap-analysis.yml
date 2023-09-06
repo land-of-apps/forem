@@ -164,12 +164,7 @@ jobs:
         run: |
           ./bin/ci
 
-      - name: Delete Request AppMaps
-        if: always()
-        run: |
-          rm -fv tmp/appmap/requests
-
-      - name: Build the AppMap archive
+      - name: Save the AppMap archive
         if: always()
         uses: getappmap/archive-action@v1
         with:
@@ -206,4 +201,4 @@ jobs:
       - name: Archive AppMaps
         uses: getappmap/archive-action@v1
         with:
-          revision: ${{ github.event.pull_request.base.sha }}
+          revision: 9998d8edbefa04792691f1598b04b51dfb8c179a
