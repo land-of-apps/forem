@@ -177,7 +177,7 @@ jobs:
 
   appmap-analysis:
     if: always()
-    runs-on: ubuntu-latest
+    runs-on: Ubuntu_4_Core
     needs: [rspec]
     permissions:
       contents: read
