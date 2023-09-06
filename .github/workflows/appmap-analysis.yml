@@ -164,12 +164,11 @@ jobs:
         run: |
           ./bin/ci
 
-      - name: Save AppMaps
-        uses: actions/cache/save@v3
+      - name: Build the AppMap archive
         if: always()
+        uses: getappmap/archive-action@v1
         with:
-          path: ${{ steps.install-appmap.outputs.appmap-dir }}
-          key: appmaps-${{ github.sha }}-${{ github.run_attempt }}
+          archive-id: ${{ matrix.ci_node_index }}
 
   appmap-analysis:
     if: always()
@@ -193,11 +192,11 @@ jobs:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           install-appmap-library: false
 
-      - name: Restore AppMaps
-        uses: actions/cache/restore@v3
+      - name: Merge AppMaps
+        uses: getappmap/archive-action/merge@v1
         with:
-          path: ${{ steps.install-appmap.outputs.appmap-dir }}
-          key: appmaps-${{ github.sha }}-${{ github.run_attempt }}
+          revision: ${{ github.event.pull_request.head.sha }}
+          archive-count: 8
       
       - name: Archive AppMaps
         uses: getappmap/archive-action@v1

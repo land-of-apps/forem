@@ -114,3 +114,7 @@ doc/
 # spec reports
 /spec/reports
 /junit.xml
+
+
+# Ignore AppMap archives and working files
+/.appmap
