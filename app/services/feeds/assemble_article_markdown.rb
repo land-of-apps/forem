@@ -20,7 +20,7 @@ module Feeds
         published: false
         date: #{@item.published}
         tags: #{get_tags}
-        canonical_url: #{@user.feed_mark_canonical ? @feed_source_url : ''}
+        canonical_url: #{@user.setting.feed_mark_canonical ? @feed_source_url : ''}
         ---
 
         #{assemble_body_markdown}
@@ -30,6 +30,13 @@ module Feeds
     end
 
     private
+
+    def base_url
+      @base_url ||=
+        URI.parse(@item.url).then do |uri|
+          "#{uri.scheme}://#{uri.host}"
+        end
+    end
 
     def processed_title
       @title.truncate(128, omission: "...", separator: " ")
@@ -43,7 +50,7 @@ module Feeds
 
     def assemble_body_markdown
       cleaned_content = Feeds::CleanHtml.call(get_content)
-      cleaned_content = thorough_parsing(cleaned_content, @feed.url)
+      cleaned_content = thorough_parsing(cleaned_content, base_url)
 
       content = ReverseMarkdown
         .convert(cleaned_content, github_flavored: true)
@@ -64,7 +71,7 @@ module Feeds
     def thorough_parsing(content, feed_url)
       html_doc = Nokogiri::HTML(content)
 
-      find_and_replace_possible_links!(html_doc) if @user.feed_referential_link
+      find_and_replace_possible_links!(html_doc) if @user.setting.feed_referential_link
       find_and_replace_picture_tags_with_img!(html_doc)
 
       if feed_url&.include?("medium.com")
@@ -123,7 +130,7 @@ module Feeds
 
     def parse_and_translate_youtube_iframe!(html_doc)
       html_doc.css("iframe").each do |iframe|
-        next unless /youtube\.com/.match?(iframe.attributes["src"].value)
+        next unless iframe.attributes["src"].value.include?("youtube.com")
 
         iframe.name = "p"
         youtube_id = iframe.attributes["src"].value.scan(/embed%2F(.{4,11})/).flatten.first

@@ -1,23 +1,39 @@
+Rails.root.glob("lib/omni_auth/strategies/*.rb").each do |filename|
+  require_dependency filename
+end
+
+FOREM_OMNIAUTH_SETUP = lambda do |env|
+  env["omniauth.strategy"].options[:client_id] = Settings::Authentication.forem_key
+  env["omniauth.strategy"].options[:client_secret] = Settings::Authentication.forem_secret
+end
+
 TWITTER_OMNIAUTH_SETUP = lambda do |env|
   env["omniauth.strategy"].options[:consumer_key] = Settings::Authentication.twitter_key
   env["omniauth.strategy"].options[:consumer_secret] = Settings::Authentication.twitter_secret
 end
 
-GITHUB_OMNIUATH_SETUP = lambda do |env|
+GITHUB_OMNIAUTH_SETUP = lambda do |env|
+  env["omniauth.strategy"].options[:scope] = "user:email"
   env["omniauth.strategy"].options[:client_id] = Settings::Authentication.github_key
   env["omniauth.strategy"].options[:client_secret] = Settings::Authentication.github_secret
-  env["omniauth.strategy"].options[:scope] = "user:email"
+end
+
+GOOGLE_OAUTH2_OMNIAUTH_SETUP = lambda do |env|
+  env["omniauth.strategy"].options[:scope] = "email,profile"
+  env["omniauth.strategy"].options[:client_id] = Settings::Authentication.google_oauth2_key
+  env["omniauth.strategy"].options[:client_secret] = Settings::Authentication.google_oauth2_secret
 end
 
 FACEBOOK_OMNIAUTH_SETUP = lambda do |env|
+  env["omniauth.strategy"].options[:scope] = "email"
   env["omniauth.strategy"].options[:client_id] = Settings::Authentication.facebook_key
   env["omniauth.strategy"].options[:client_secret] = Settings::Authentication.facebook_secret
   env["omniauth.strategy"].options[:token_params][:parse] = :json
 end
 
 APPLE_OMNIAUTH_SETUP = lambda do |env|
-  env["omniauth.strategy"].options[:client_id] = Settings::Authentication.apple_client_id
   env["omniauth.strategy"].options[:scope] = "email name"
+  env["omniauth.strategy"].options[:client_id] = Settings::Authentication.apple_client_id
   env["omniauth.strategy"].options[:key_id] = Settings::Authentication.apple_key_id
   env["omniauth.strategy"].options[:pem] = Settings::Authentication.apple_pem.to_s.gsub("\\n", "\n")
   env["omniauth.strategy"].options[:provider_ignores_state] = true
@@ -35,7 +51,7 @@ Devise.setup do |config|
   # Configure the e-mail address which will be shown in Devise::Mailer,
   # note that it will be overwritten if you use your own mailer class
   # with default "from" parameter.
-  config.mailer_sender = "#{ENV['COMMUNITY_NAME']} <#{ENV['DEFAULT_EMAIL']}>"
+  config.mailer_sender = "#{ENV.fetch('COMMUNITY_NAME', nil)} <#{ENV.fetch('DEFAULT_EMAIL', nil)}>"
 
   # Configure the class responsible to send e-mails.
   # config.mailer = 'Devise::Mailer'
@@ -311,9 +327,11 @@ Devise.setup do |config|
 
   # Fun fact, unless Twitter is last, it doesn't work for some reason.
   config.omniauth :facebook, setup: FACEBOOK_OMNIAUTH_SETUP
-  config.omniauth :github, setup: GITHUB_OMNIUATH_SETUP
-  config.omniauth :twitter, setup: TWITTER_OMNIAUTH_SETUP
+  config.omniauth :github, setup: GITHUB_OMNIAUTH_SETUP
+  config.omniauth :google_oauth2, setup: GOOGLE_OAUTH2_OMNIAUTH_SETUP
   config.omniauth :apple, setup: APPLE_OMNIAUTH_SETUP
+  config.omniauth :forem, setup: FOREM_OMNIAUTH_SETUP, strategy_class: OmniAuth::Strategies::Forem
+  config.omniauth :twitter, setup: TWITTER_OMNIAUTH_SETUP
 
   # ==> Warden configuration
   # If you want to use other strategies, that are not supported by Devise, or

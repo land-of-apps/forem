@@ -1,18 +1,16 @@
 class FeedbackMessagesController < ApplicationController
   # No authorization required for entirely public controller
   skip_before_action :verify_authenticity_token
-  FLASH_MESSAGE = "Make sure the forms are filled. 🤖 Other possible errors: "\
-                  "%<errors>s".freeze
+  FEEDBACK_ALLOWED_PARAMS = %i[message feedback_type category reported_url offender_id].freeze
 
   def create
     flash.clear
-    rate_limit!(:feedback_message_creation)
 
     params = feedback_message_params.merge(reporter_id: current_user&.id)
     @feedback_message = FeedbackMessage.new(params)
 
     recaptcha_enabled = ReCaptcha::CheckEnabled.call(current_user)
-    if (!recaptcha_enabled || recaptcha_verified? || connect_feedback?) && @feedback_message.save
+    if (!recaptcha_enabled || recaptcha_verified?) && !rate_limit? && @feedback_message.save
       Slack::Messengers::Feedback.call(
         user: current_user,
         type: feedback_message_params[:feedback_type],
@@ -23,7 +21,7 @@ class FeedbackMessagesController < ApplicationController
       rate_limiter.track_limit_by_action(:feedback_message_creation)
 
       if user_signed_in?
-        Rails.cache.fetch("user-#{current_user.id}-feedback-response-sent-at", expires_in: 24.hours) do
+        Rails.cache.fetch("#{current_user.cache_key}/feedback-response-sent-at", expires_in: 24.hours) do
           NotifyMailer.with(email_to: current_user.email).feedback_response_email.deliver_later
           Time.current
         end
@@ -31,11 +29,15 @@ class FeedbackMessagesController < ApplicationController
 
       respond_to do |format|
         format.html { redirect_to feedback_messages_path }
-        format.json { render json: { success: true, message: "Your report is submitted" } }
+        format.json do
+          render json: { success: true, message: I18n.t("feedback_messages_controller.submitted") }
+        end
       end
     else
       @previous_message = feedback_message_params[:message]
-      flash[:notice] = format(FLASH_MESSAGE, errors: @feedback_message.errors_as_sentence.presence || "N/A")
+      flash[:notice] =
+        I18n.t("feedback_messages_controller.error_fill",
+               errors: @feedback_message.errors_as_sentence.presence || I18n.t("feedback_messages_controller.n_a"))
 
       respond_to do |format|
         format.html { render "pages/report_abuse" }
@@ -57,12 +59,17 @@ class FeedbackMessagesController < ApplicationController
     params["g-recaptcha-response"] && verify_recaptcha(recaptcha_params)
   end
 
-  def connect_feedback?
-    feedback_message_params[:feedback_type] == "connect"
+  def feedback_message_params
+    params.require(:feedback_message).permit(FEEDBACK_ALLOWED_PARAMS)
   end
 
-  def feedback_message_params
-    allowed_params = %i[message feedback_type category reported_url offender_id]
-    params.require(:feedback_message).permit(allowed_params)
+  def rate_limit?
+    begin
+      rate_limit!(:feedback_message_creation)
+    rescue StandardError => e
+      @feedback_message.errors.add(:feedback_message_creation, e.message)
+      return true
+    end
+    false
   end
 end

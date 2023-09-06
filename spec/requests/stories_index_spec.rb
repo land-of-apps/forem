@@ -1,18 +1,19 @@
 require "rails_helper"
 
-RSpec.shared_examples "redirects to the lowercase route" do
-  context "when a path contains uppercase characters" do
-    it "redirects to the lowercase route" do
-      get path
-      expect(response).to have_http_status(:moved_permanently)
-      expect(response).to redirect_to(path.downcase)
-    end
-  end
-end
+RSpec.describe "StoriesIndex" do
+  it "redirects to the lowercase route", :aggregate_failures do
+    get "/Bad_name"
+    expect(response).to have_http_status(:moved_permanently)
+    expect(response).to redirect_to("/bad_name")
 
-RSpec.describe "StoriesIndex", type: :request do
+    get "/Bad_name?i=i"
+    expect(response).to have_http_status(:moved_permanently)
+    expect(response).to redirect_to("/bad_name?i=i")
+  end
+
   describe "GET stories index" do
     let(:user) { create(:user) }
+    let(:org) { create(:organization) }
 
     it "renders page with article list and proper attributes", :aggregate_failures do
       article = create(:article, featured: true)
@@ -20,10 +21,16 @@ RSpec.describe "StoriesIndex", type: :request do
 
       get "/"
       expect(response.body).to include(CGI.escapeHTML(article.title))
-      renders_ga_tracking_data
+      renders_ga_tracking_fields
       renders_proper_description
       renders_min_read_time
       renders_proper_sidebar(navigation_link)
+    end
+
+    it "doesn't render a featured scheduled article" do
+      article = create(:article, featured: true, published_at: 1.hour.from_now)
+      get "/"
+      expect(response.body).not_to include(CGI.escapeHTML(article.title))
     end
 
     def renders_proper_description
@@ -38,15 +45,18 @@ RSpec.describe "StoriesIndex", type: :request do
       expect(response.body).to include(CGI.escapeHTML(navigation_link.name))
     end
 
-    def renders_ga_tracking_data
+    def renders_ga_tracking_fields
       expect(response.body).to include("data-ga-tracking=\"#{Settings::General.ga_tracking_id}\"")
+      expect(response.body).to include("data-ga4-tracking-id=\"#{Settings::General.ga_analytics_4_id}\"")
     end
 
     it "renders registration page if the Forem instance is private" do
       allow(Settings::UserExperience).to receive(:public).and_return(false)
+      allow(Authentication::Providers).to receive(:enabled).and_return(%i[github twitter])
 
       get root_path
-      expect(response.body).to include("Continue with")
+      expect(response.body).to include("Continue with GitHub")
+      expect(response.body).to include("Continue with Twitter")
     end
 
     it "renders a landing page if one is active and if the site config is set to private" do
@@ -57,52 +67,39 @@ RSpec.describe "StoriesIndex", type: :request do
       expect(response.body).to include("This is a landing page!")
     end
 
-    it "renders all display_ads when published and approved" do
-      org = create(:organization)
-      ad = create(:display_ad, published: true, approved: true, organization: org)
-      right_ad = create(:display_ad, published: true, approved: true, placement_area: "sidebar_right",
-                                     organization: org)
+    it "renders billboards when published and approved" do
+      ad = create(:billboard, published: true, approved: true, placement_area: "sidebar_right",
+                              organization: org)
 
       get "/"
       expect(response.body).to include(ad.processed_html)
-      expect(response.body).to include(right_ad.processed_html)
     end
 
-    it "does not render display_ads when not approved" do
-      org = create(:organization)
-      ad = create(:display_ad, published: true, approved: false, organization: org)
-      right_ad = create(:display_ad, published: true, approved: false, placement_area: "sidebar_right",
-                                     organization: org)
+    it "does not render billboards when not approved" do
+      ad = create(:billboard, published: true, approved: false, placement_area: "sidebar_right",
+                              organization: org)
 
       get "/"
       expect(response.body).not_to include(ad.processed_html)
-      expect(response.body).not_to include(right_ad.processed_html)
     end
 
-    it "displays correct sponsors", :aggregate_failures do
-      org = create(:organization)
-      gold_sponsorship = create(:sponsorship, level: "gold", tagline: "GOLD!!!", status: "live", organization: org)
-      silver_sponsorship = create(:sponsorship, level: "silver", tagline: "SILVER!!!", status: "live",
-                                                organization: org)
-      non_live_gold_sponsorship = create(:sponsorship, level: "gold", tagline: "NOT LIVE GOLD!!!", status: "pending",
-                                                       organization: org)
+    it "renders only one billboard per placement" do
+      billboard = create(:billboard, published: true, approved: true, placement_area: "sidebar_right",
+                                     organization: org)
+      second_billboard = create(:billboard, published: true, approved: true, placement_area: "sidebar_right",
+                                            organization: org)
+
       get "/"
-
-      displays_gold_sponsors(gold_sponsorship)
-      does_not_display_silver_sponsors(silver_sponsorship)
-      does_not_display_non_live_gold_sponsors(non_live_gold_sponsorship)
+      expect(response.body).to include(billboard.processed_html).or(include(second_billboard.processed_html))
+      expect(response.body).to include("crayons-card crayons-card--secondary crayons-sponsorship").once
+      expect(response.body).to include("sponsorship-dropdown-trigger-").once
     end
 
-    def displays_gold_sponsors(sponsorship)
-      expect(response.body).to include(sponsorship.tagline)
-    end
-
-    def does_not_display_silver_sponsors(sponsorship)
-      expect(response.body).not_to include(sponsorship.tagline)
-    end
-
-    def does_not_display_non_live_gold_sponsors(sponsorship)
-      expect(response.body).not_to include(sponsorship.tagline)
+    it "renders a hero billboard" do
+      allow(FeatureFlag).to receive(:enabled?).with(:hero_billboard).and_return(true)
+      billboard = create(:billboard, published: true, approved: true, placement_area: "home_hero", organization: org)
+      get "/"
+      expect(response.body).to include(billboard.processed_html)
     end
 
     it "shows listings" do
@@ -115,17 +112,17 @@ RSpec.describe "StoriesIndex", type: :request do
     it "does not set cache-related headers if private" do
       allow(Settings::UserExperience).to receive(:public).and_return(false)
       get "/"
-      expect(response.status).to eq(200)
+      expect(response).to have_http_status(:ok)
 
-      expect(response.headers["X-Accel-Expires"]).to eq(nil)
+      expect(response.headers["X-Accel-Expires"]).to be_nil
       expect(response.headers["Cache-Control"]).not_to eq("public, no-cache")
-      expect(response.headers["Surrogate-Key"]).to eq(nil)
+      expect(response.headers["Surrogate-Key"]).to be_nil
     end
 
     it "sets correct cache headers", :aggregate_failures do
       get "/"
 
-      expect(response.status).to eq(200)
+      expect(response).to have_http_status(:ok)
       sets_fastly_headers
       sets_nginx_headers
     end
@@ -158,7 +155,7 @@ RSpec.describe "StoriesIndex", type: :request do
 
       allow(Settings::UserExperience).to receive(:feed_style).and_return("basic")
       get "/"
-      expect(response.body.scan(/(?=class="crayons-story__cover crayons-story__cover__image)/).count).to be 1
+      expect(response.body.scan(/(?=class="crayons-article__cover crayons-article__cover__image__feed)/).count).to be 1
     end
 
     it "shows multiple cover images if rich feed style" do
@@ -166,7 +163,9 @@ RSpec.describe "StoriesIndex", type: :request do
 
       allow(Settings::UserExperience).to receive(:feed_style).and_return("rich")
       get "/"
-      expect(response.body.scan(/(?=class="crayons-story__cover crayons-story__cover__image)/).count).to be > 1
+      # rubocop:disable Layout/LineLength
+      expect(response.body.scan(/(?=class="crayons-article__cover crayons-article__cover__image__feed)/).count).to be > 1
+      # rubocop:enable Layout/LineLength
     end
 
     context "with campaign hero" do
@@ -215,17 +214,22 @@ RSpec.describe "StoriesIndex", type: :request do
         create(:article, approved: false, body_markdown: u_body, score: 1)
       end
 
+      it "displays display name when it is set" do
+        allow(Settings::Campaign).to receive(:display_name).and_return("Backstreet is back")
+        get "/"
+        expect(response.body).not_to include("Backstreet is back (0)")
+      end
+
+      it "displays Stories fallback when display name is not set" do
+        allow(Settings::Campaign).to receive(:display_name).and_return("")
+        get "/"
+        expect(response.body).not_to include("Stories (0)")
+      end
+
       it "doesn't display posts with the campaign tags when sidebar is disabled" do
         allow(Settings::Campaign).to receive(:sidebar_enabled).and_return(false)
         get "/"
         expect(response.body).not_to include(CGI.escapeHTML("Super-sheep"))
-      end
-
-      it "doesn't display low-score posts" do
-        allow(Settings::Campaign).to receive(:sidebar_enabled).and_return(true)
-        allow(Settings::Campaign).to receive(:articles_require_approval).and_return(true)
-        get "/"
-        expect(response.body).not_to include(CGI.escapeHTML("Unapproved-post"))
       end
 
       it "doesn't display unapproved posts" do
@@ -266,37 +270,86 @@ RSpec.describe "StoriesIndex", type: :request do
         expect(response.body).not_to include('<a href="https://campaign-lander.com"')
       end
     end
+
+    context "with default_locale configured to fr" do
+      before do
+        allow(Settings::UserExperience).to receive(:default_locale).and_return("fr")
+        get "/"
+      end
+
+      it "names proper locale" do
+        expect(I18n.locale).to eq(:fr)
+      end
+
+      it "has proper locale content on page" do
+        expect(response.body).to include("Recherche")
+      end
+    end
   end
 
-  describe "GET query page" do
-    it "renders page with proper header" do
-      get "/search?q=hello"
-      expect(response.body).to include("=> Search Results")
+  describe "GET stories index with timeframe" do
+    describe "/latest" do
+      let(:user) { create(:user) }
+      let!(:low_score) { create(:article, score: -10) }
+
+      before do
+        create_list(:article, 3, score: Settings::UserExperience.home_feed_minimum_score + 1)
+      end
+
+      it "includes a link to Relevant", :aggregate_failures do
+        get "/latest"
+
+        # The link should be `/`
+        expected_tag = "<a data-text=\"Relevant\" href=\"/\""
+        expect(response.body).to include(expected_tag)
+      end
+
+      it "includes message and a link to sign in for signed-out" do
+        get "/latest"
+        expect(response.body).to include("Some latest posts are only visible for members")
+        expect(response.body).to match(/Sign in.*to see all latest/)
+      end
+
+      it "excludes low-score content for signed-out" do
+        get "/latest"
+        expect(response.body).not_to include(low_score.title)
+      end
+    end
+
+    describe "/top/week" do
+      it "includes a link to Relevant", :aggregate_failures do
+        get "/top/week"
+
+        # The link should be `/`
+        expected_tag = "<a data-text=\"Relevant\" href=\"/\""
+        expect(response.body).to include(expected_tag)
+      end
+    end
+  end
+
+  describe "GET locale index" do
+    it "names proper locale" do
+      get "/locale/fr"
+      expect(I18n.locale).to eq(:fr)
+    end
+
+    it "has proper locale content on page" do
+      get "/locale/fr"
+      expect(response.body).to include("Recherche")
+    end
+
+    it "uses fallback locale if invalid locale passed" do
+      get "/locale/fake"
+      expect(I18n.locale).to eq(:en)
     end
   end
 
   describe "GET podcast index" do
-    include_examples "redirects to the lowercase route" do
-      let(:path) { "/#{build(:podcast).slug.upcase}" }
-    end
-
     it "renders page with proper header" do
       podcast = create(:podcast)
       create(:podcast_episode, podcast: podcast)
       get "/#{podcast.slug}"
       expect(response.body).to include(podcast.title)
-    end
-  end
-
-  describe "GET user_path" do
-    include_examples "redirects to the lowercase route" do
-      let(:path) { "/#{build(:user).username.upcase}" }
-    end
-  end
-
-  describe "GET organization_path" do
-    include_examples "redirects to the lowercase route" do
-      let(:path) { "/#{build(:organization).slug.upcase}" }
     end
   end
 end

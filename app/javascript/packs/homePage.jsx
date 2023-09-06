@@ -1,5 +1,12 @@
 import { h, render } from 'preact';
+import ahoy from 'ahoy.js';
 import { TagsFollowed } from '../leftSidebar/TagsFollowed';
+import {
+  observeBillboards,
+  initializeBillboardVisibility,
+} from '../packs/billboardAfterRenderActions';
+import { setupBillboardDropdown } from '@utilities/billboardDropdown';
+import { trackCreateAccountClicks } from '@utilities/ahoy/trackEvents';
 
 /* global userData */
 // This logic is similar to that in initScrolling.js.erb
@@ -43,6 +50,16 @@ function renderTagsFollowed(user = userData()) {
   });
 
   render(<TagsFollowed tags={followedTags} />, tagsFollowedContainer);
+  trackTagCogIconClicks();
+}
+
+// Temporary Ahoy Stats for usage reports
+function trackTagCogIconClicks() {
+  document
+    .getElementById('tag-priority-link')
+    ?.addEventListener('click', () => {
+      ahoy.track('Tag settings cog icon click');
+    });
 }
 
 function renderSidebar() {
@@ -60,6 +77,7 @@ function renderSidebar() {
       .then((res) => res.text())
       .then((response) => {
         sidebarContainer.innerHTML = response;
+        setupBillboardDropdown();
       });
   }
 }
@@ -79,8 +97,13 @@ if (!document.getElementById('featured-story-marker')) {
         return;
       }
       import('./homePageFeed').then(({ renderFeed }) => {
-        // We have user data, render followed tags.
-        renderFeed(feedTimeFrame);
+        const callback = () => {
+          initializeBillboardVisibility();
+          observeBillboards();
+          setupBillboardDropdown();
+        };
+
+        renderFeed(feedTimeFrame, callback);
 
         InstantClick.on('change', () => {
           const { userStatus: currentUserStatus } = document.body.dataset;
@@ -96,7 +119,13 @@ if (!document.getElementById('featured-story-marker')) {
             return;
           }
 
-          renderFeed(changedFeedTimeFrame);
+          const callback = () => {
+            initializeBillboardVisibility();
+            observeBillboards();
+            setupBillboardDropdown();
+          };
+
+          renderFeed(changedFeedTimeFrame, callback);
         });
       });
 
@@ -116,3 +145,5 @@ InstantClick.on('change', () => {
   renderSidebar();
 });
 InstantClick.init();
+
+trackCreateAccountClicks('sidebar-wrapper-left');

@@ -2,6 +2,34 @@ module CommentsHelper
   MAX_COMMENTS_TO_RENDER = 250
   MIN_COMMENTS_TO_RENDER = 8
 
+  def any_negative_comments?(commentable)
+    commentable.comments.where("score < 0").any?
+  end
+
+  def any_hidden_negative_comments?(commentable)
+    !user_signed_in? && any_negative_comments?(commentable)
+  end
+
+  def all_comments_visible?(commentable)
+    !(commentable.any_comments_hidden || any_hidden_negative_comments?(commentable))
+  end
+
+  def article_comment_tree(article, count, order)
+    @article_comment_tree ||= begin
+      collection = Comment.tree_for(article, count, order)
+      collection.reject! { |comment| comment.score.negative? } unless user_signed_in?
+      collection
+    end
+  end
+
+  def podcast_comment_tree(episode)
+    @podcast_comment_tree ||= begin
+      collection = Comment.tree_for(episode, 12)
+      collection.reject! { |comment| comment.score.negative? } unless user_signed_in?
+      collection
+    end
+  end
+
   def comment_class(comment, is_view_root: false)
     if comment.root? || is_view_root
       "root"
@@ -23,7 +51,11 @@ module CommentsHelper
   end
 
   def get_ama_or_op_banner(commentable)
-    commentable.decorate.cached_tag_list_array.include?("ama") ? "Ask Me Anything" : "Author"
+    if commentable.decorate.cached_tag_list_array.include?(I18n.t("helpers.comments_helper.ama"))
+      I18n.t("helpers.comments_helper.ask_me_anything")
+    else
+      I18n.t("helpers.comments_helper.author")
+    end
   end
 
   def tree_for(comment, sub_comments, commentable)
@@ -31,7 +63,8 @@ module CommentsHelper
   end
 
   def should_be_hidden?(comment, root_comment)
-    comment.hidden_by_commentable_user && comment != root_comment
+    # when opened by a permalink + root comment is hidden => show root comment and its descendants
+    comment.hidden_by_commentable_user && comment != root_comment && !root_comment&.hidden_by_commentable_user
   end
 
   def high_number_of_comments?(comments_number)
@@ -51,14 +84,23 @@ module CommentsHelper
   end
 
   def like_button_text(comment)
-    case comment.public_reactions_count
-    when 0
-      "Like"
-    when 1
-      "&nbsp;like"
+    # TODO: [yheuhtozr] support cross-element i18n compatible with initializeCommentsPage.js.erb
+    if comment.public_reactions_count.zero?
+      ""
     else
-      "&nbsp;likes"
+      I18n.t("helpers.comments_helper.nbsp_likes_html", count: comment.public_reactions_count)
     end
+  end
+
+  def contextual_comment_url(comment, article: nil)
+    # Liquid tag parsing doesn't have Devise/Warden (request middleware)
+    return URL.comment(comment) if request.env["warden"].nil?
+
+    # Logged in users should get the comment permalink
+    return URL.comment(comment) if user_signed_in?
+
+    # Logged out users should get the article URL with the comment anchor
+    URL.fragment_comment(comment, path: article&.path)
   end
 
   private

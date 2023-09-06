@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe "UserSettings", type: :request do
+RSpec.describe "UserSettings" do
   let(:user) { create(:user) }
 
   describe "GET /settings/:tab" do
@@ -53,7 +53,7 @@ RSpec.describe "UserSettings", type: :request do
         expect(response.body).to include("Email notifications", "Mobile notifications", "General notifications")
       end
 
-      it "displays moderator notifications secons on Notifications tab if trusted" do
+      it "displays moderator notifications second on Notifications tab if trusted" do
         user.add_role(:trusted)
 
         get user_settings_path(:notifications)
@@ -64,7 +64,7 @@ RSpec.describe "UserSettings", type: :request do
       it "displays content on Account tab properly" do
         get user_settings_path(:account)
 
-        expect(response.body).to include("Set new password", "Account emails", "API Keys", "Danger Zone")
+        expect(response.body).to include("Set new password", "Account emails", "Danger Zone")
       end
 
       it "displays content on Billing tab properly" do
@@ -83,9 +83,13 @@ RSpec.describe "UserSettings", type: :request do
         get user_settings_path(:extensions)
 
         feed_section = "Publishing to #{Settings::Community.community_name} from RSS"
-        stackbit_section = "Generate a personal blog from your #{Settings::Community.community_name} posts"
-        titles = ["Comment templates", "Connect settings", feed_section, "Web monetization", stackbit_section]
+        titles = ["Comment templates", feed_section, "Web monetization", "API Keys"]
         expect(response.body).to include(*titles)
+      end
+
+      it "includes contact us on RSS page properly" do
+        get user_settings_path(:extensions)
+        expect(response.body).to include(I18n.t("contact_prompts.if_any_questions_html"))
       end
 
       it "renders heads up dupe account message with proper param" do
@@ -180,6 +184,17 @@ RSpec.describe "UserSettings", type: :request do
 
         expect(response.body).to include("Connect GitHub Account")
       end
+
+      it "does not allow to connect an Apple Account to an existing user" do
+        allow(Authentication::Providers).to receive(:enabled).and_return(Authentication::Providers.available)
+        user = create(:user, :with_identity, identities: [:twitter])
+
+        sign_in user
+        get user_settings_path
+
+        expect(response.body).to include("Connect GitHub Account")
+        expect(response.body).not_to include("Connect Apple Account")
+      end
     end
 
     describe "GitHub repositories" do
@@ -227,53 +242,20 @@ RSpec.describe "UserSettings", type: :request do
   describe "PUT /update/:id" do
     before { sign_in user }
 
-    it "updates summary" do
-      put "/users/#{user.id}", params: { user: { tab: "profile", summary: "Hello new summary" } }
-      expect(user.summary).to eq("Hello new summary")
-    end
-
     it "updates profile_updated_at" do
       user.update_column(:profile_updated_at, 2.weeks.ago)
-      put "/users/#{user.id}", params: { user: { tab: "profile", summary: "Hello new summary" } }
+      put "/users/#{user.id}", params: { user: { tab: "profile", username: "new_username" } }
       expect(user.reload.profile_updated_at).to be > 2.minutes.ago
-    end
-
-    it "disables reaction notifications (in both users and notification_settings tables)" do
-      expect(user.notification_setting.reaction_notifications).to be(true)
-
-      expect do
-        put "/users/#{user.id}", params: { user: { tab: "notifications", reaction_notifications: 0 } }
-      end.to change { user.reload.reaction_notifications }.from(true).to(false)
-
-      expect(user.notification_setting.reload.reaction_notifications).to be(false)
-    end
-
-    it "enables community-success notifications" do
-      put "/users/#{user.id}", params: { user: { tab: "notifications", mod_roundrobin_notifications: 1 } }
-      expect(user.reload.subscribed_to_mod_roundrobin_notifications?).to be(true)
     end
 
     it "updates the users announcement display preferences (in both users and user_settings tables)" do
       expect(user.setting.display_announcements).to be(true)
 
       expect do
-        put "/users/#{user.id}", params: { user: { tab: "misc", display_announcements: 0 } }
-      end.to change { user.reload.display_announcements }.from(true).to(false)
+        put users_settings_path(user.setting.id), params: { users_setting: { display_announcements: 0 } }
+      end.to change { user.setting.reload.display_announcements }.from(true).to(false)
 
       expect(user.setting.reload.display_announcements).to be(false)
-    end
-
-    it "disables community-success notifications" do
-      put "/users/#{user.id}", params: { user: { tab: "notifications", mod_roundrobin_notifications: 0 } }
-      expect(user.reload.subscribed_to_mod_roundrobin_notifications?).to be(false)
-    end
-
-    it "can toggle welcome notifications" do
-      put "/users/#{user.id}", params: { user: { tab: "notifications", welcome_notifications: 0 } }
-      expect(user.reload.subscribed_to_welcome_notifications?).to be(false)
-
-      put "/users/#{user.id}", params: { user: { tab: "notifications", welcome_notifications: 1 } }
-      expect(user.reload.subscribed_to_welcome_notifications?).to be(true)
     end
 
     it "updates username to too short username" do
@@ -338,12 +320,16 @@ RSpec.describe "UserSettings", type: :request do
 
     context "when requesting a fetch of the feed", vcr: { cassette_name: "feeds_import_medium_vaidehi" } do
       let(:feed_url) { "https://medium.com/feed/@vaidehijoshi" }
-      let(:user) { create(:user, feed_url: feed_url) }
+      let(:user) do
+        u = create(:user)
+        u.setting.update(feed_url: feed_url)
+        u
+      end
 
       it "invokes Feeds::ImportArticlesWorker" do
         allow(Feeds::ImportArticlesWorker).to receive(:perform_async).with(user.id)
 
-        put user_path(user.id), params: { user: { feed_url: feed_url } }
+        put users_settings_path(user.setting.id), params: { users_setting: { feed_url: feed_url } }
 
         expect(Feeds::ImportArticlesWorker).to have_received(:perform_async).with(user.id)
       end
@@ -373,7 +359,7 @@ RSpec.describe "UserSettings", type: :request do
       it "empties their associated username" do
         delete users_remove_identity_path, params: { provider: provider }
 
-        expect(user.public_send("#{provider}_username")).to be(nil)
+        expect(user.public_send("#{provider}_username")).to be_nil
       end
 
       it "updates the profile_updated_at timestamp" do
@@ -402,7 +388,7 @@ RSpec.describe "UserSettings", type: :request do
         expect(response).to redirect_to("/settings/account")
 
         error =
-          "An error occurred. Please try again or send an email to: #{ForemInstance.email}"
+          "An error occurred. Please try again or send an email to: #{ForemInstance.contact_email}"
         expect(flash[:error]).to eq(error)
       end
 
@@ -445,7 +431,7 @@ RSpec.describe "UserSettings", type: :request do
         delete users_remove_identity_path, params: { provider: provider }
 
         error =
-          "An error occurred. Please try again or send an email to: #{ForemInstance.email}"
+          "An error occurred. Please try again or send an email to: #{ForemInstance.contact_email}"
         expect(flash[:error]).to eq(error)
       end
 

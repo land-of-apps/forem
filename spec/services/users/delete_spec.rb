@@ -21,14 +21,6 @@ RSpec.describe Users::Delete, type: :service do
     expect(cache_bust).to have_received(:call).with("/#{user.username}")
   end
 
-  it "deletes user's sponsorships" do
-    create(:sponsorship, user: user)
-
-    expect do
-      described_class.call(user)
-    end.to change(Sponsorship, :count).by(-1)
-  end
-
   it "deletes user's follows" do
     create(:follow, follower: user)
     create(:follow, followable: user)
@@ -44,6 +36,14 @@ RSpec.describe Users::Delete, type: :service do
     expect(Article.find_by(id: article.id)).to be_nil
   end
 
+  it "deletes user's owned podcasts" do
+    podcast = create(:podcast, creator: user)
+    create(:podcast_ownership, owner: user, podcast: podcast)
+    expect do
+      described_class.call(user)
+    end.to change(Podcast, :count).by(-1)
+  end
+
   it "deletes the destroy token" do
     allow(Rails.cache).to receive(:delete).and_call_original
     described_class.call(user)
@@ -55,9 +55,9 @@ RSpec.describe Users::Delete, type: :service do
 
     expect do
       described_class.call(user)
-    end.to change(AuditLog, :count).by(0)
+    end.not_to change(AuditLog, :count)
 
-    expect(audit_log.reload.user_id).to be(nil)
+    expect(audit_log.reload.user_id).to be_nil
   end
 
   it "deletes field tests memberships" do
@@ -66,6 +66,14 @@ RSpec.describe Users::Delete, type: :service do
     expect do
       described_class.call(user)
     end.to change(FieldTest::Membership, :count).by(-1)
+  end
+
+  it "deletes reactions to the user" do
+    create(:vomit_reaction, reactable: user)
+
+    expect do
+      described_class.call(user)
+    end.to change(Reaction, :count).by(-1)
   end
 
   # check that all the associated records are being destroyed,
@@ -77,6 +85,7 @@ RSpec.describe Users::Delete, type: :service do
         audit_logs
         banished_users
         created_podcasts
+        billboard_events
         offender_feedback_messages
         page_views
         rating_votes
@@ -127,6 +136,7 @@ RSpec.describe Users::Delete, type: :service do
     end
 
     it "keeps the kept associations" do
+      # NB: each association must have a factory defined!
       expect(kept_associations).not_to be_empty
       user.reload
       described_class.call(user)
@@ -147,22 +157,6 @@ RSpec.describe Users::Delete, type: :service do
           expect { user_association.reload }.to raise_error(ActiveRecord::RecordNotFound)
         end
       end
-    end
-  end
-
-  context "when cleaning up chat channels" do
-    let(:other_user) { create(:user) }
-
-    it "deletes the user's private chat channels" do
-      chat_channel = ChatChannels::CreateWithUsers.call(users: [user, other_user])
-      described_class.call(user)
-      expect(ChatChannel.find_by(id: chat_channel.id)).to be_nil
-    end
-
-    it "does not delete the user's open channels" do
-      chat_channel = ChatChannels::CreateWithUsers.call(users: [user, other_user], channel_type: "open")
-      described_class.call(user)
-      expect(ChatChannel.find_by(id: chat_channel.id)).not_to be_nil
     end
   end
 

@@ -15,44 +15,47 @@ class StoriesController < ApplicationController
   }.freeze
 
   SIGNED_OUT_RECORD_COUNT = 60
+  REDIRECT_VIEW_PARAMS = %w[moderate admin].freeze
 
-  before_action :authenticate_user!, except: %i[index search show]
-  before_action :set_cache_control_headers, only: %i[index search show]
+  before_action :authenticate_user!, except: %i[index show]
+  before_action :set_cache_control_headers, only: %i[index show]
+  before_action :set_user_limit, only: %i[index show]
   before_action :redirect_to_lowercase_username, only: %i[index]
 
   rescue_from ArgumentError, with: :bad_request
 
   def index
     @page = (params[:page] || 1).to_i
-    @article_index = true
 
     return handle_user_or_organization_or_podcast_or_page_index if params[:username]
 
     handle_base_index
   end
 
-  def search
-    @query = "...searching"
-    @article_index = true
-    @current_ordering = current_search_results_ordering
-    set_surrogate_key_header "articles-page-with-query"
-    render template: "articles/search"
-  end
-
   def show
     @story_show = true
-    if (@article = Article.find_by(path: "/#{params[:username].downcase}/#{params[:slug]}")&.decorate)
+    path = "/#{params[:username].downcase}/#{params[:slug]}"
+    if (@article = Article.includes(:user).find_by(path: path)&.decorate)
       handle_article_show
     elsif (@article = Article.find_by(slug: params[:slug])&.decorate)
       handle_possible_redirect
-    else
-      @podcast = Podcast.available.find_by!(slug: params[:username])
+    elsif (@podcast = Podcast.available.find_by(slug: params[:username]))
       @episode = @podcast.podcast_episodes.available.find_by!(slug: params[:slug])
       handle_podcast_show
+    else
+      not_found
     end
   end
 
   private
+
+  def set_user_limit
+    @user_limit = 50
+  end
+
+  def assign_hero_banner
+    @hero_billboard = Billboard.for_display(area: "home_hero", user_signed_in: user_signed_in?)
+  end
 
   def assign_hero_html
     return if Campaign.current.hero_html_variant_name.blank?
@@ -63,15 +66,8 @@ class StoriesController < ApplicationController
   end
 
   def get_latest_campaign_articles
-    campaign_articles_scope = Article.tagged_with(Campaign.current.featured_tags, any: true)
-      .where("published_at > ? AND score > ?", Settings::Campaign.articles_expiry_time.weeks.ago, 0)
-      .order(hotness_score: :desc)
-
-    requires_approval = Campaign.current.articles_require_approval?
-    campaign_articles_scope = campaign_articles_scope.where(approved: true) if requires_approval
-
-    @campaign_articles_count = campaign_articles_scope.count
-    @latest_campaign_articles = campaign_articles_scope.limit(5).pluck(:path, :title, :comments_count, :created_at)
+    @campaign_articles_count = Campaign.current.count
+    @latest_campaign_articles = Campaign.current.plucked_article_attributes
   end
 
   def redirect_to_changed_username_profile
@@ -94,7 +90,7 @@ class StoriesController < ApplicationController
     potential_username = params[:username].tr("@", "").downcase
     @user = User.find_by("old_username = ? OR old_old_username = ?", potential_username, potential_username)
     if @user&.articles&.find_by(slug: params[:slug])
-      redirect_permanently_to(URI.parse("/#{@user.username}/#{params[:slug]}").path)
+      redirect_permanently_to(Addressable::URI.parse("/#{@user.username}/#{params[:slug]}").path)
       return
     end
 
@@ -138,10 +134,11 @@ class StoriesController < ApplicationController
   def handle_base_index
     @home_page = true
     assign_feed_stories unless user_signed_in? # Feed fetched async for signed-in users
+    assign_hero_banner
     assign_hero_html
     assign_podcasts
     get_latest_campaign_articles if Campaign.current.show_in_sidebar?
-    @article_index = true
+
     set_surrogate_key_header "main_app_home_page"
     set_cache_control_headers(600,
                               stale_while_revalidate: 30,
@@ -150,15 +147,19 @@ class StoriesController < ApplicationController
     render template: "articles/index"
   end
 
+  def pinned_article
+    @pinned_article ||= PinnedArticle.get
+  end
+
   def featured_story
-    @featured_story ||= Articles::Feeds::LargeForemExperimental.find_featured_story(@stories)
+    @featured_story ||= Articles::Feeds::FindFeaturedStory.call(@stories)
   end
 
   def handle_podcast_index
     @podcast_index = true
     @list_of = "podcast-episodes"
     @podcast_episodes = @podcast.podcast_episodes
-      .reachable.order(published_at: :desc).limit(30).decorate
+      .reachable.order(published_at: :desc).page(params[:page]).per(30)
     set_surrogate_key_header "podcast_episodes"
     render template: "podcast_episodes/index"
   end
@@ -169,6 +170,7 @@ class StoriesController < ApplicationController
       .limited_column_select
       .order(published_at: :desc).page(@page).per(8))
     @organization_article_index = true
+    @organization_users = @organization.users.order(badge_achievements_count: :desc)
     set_organization_json_ld
     set_surrogate_key_header "articles-org-#{@organization.id}"
     render template: "organizations/show"
@@ -182,6 +184,9 @@ class StoriesController < ApplicationController
     end
     not_found if @user.username.include?("spam_") && @user.decorate.fully_banished?
     not_found unless @user.registered
+    if !user_signed_in? && (@user.suspended? && @user.has_no_published_content?)
+      not_found
+    end
     assign_user_comments
     assign_user_stories
     @list_of = "articles"
@@ -220,8 +225,7 @@ class StoriesController < ApplicationController
   end
 
   def redirect_if_view_param
-    redirect_to admin_user_path(@user.id) if params[:view] == "moderate"
-    redirect_to edit_admin_user_path(@user.id) if params[:view] == "admin"
+    redirect_to admin_user_path(@user.id) if REDIRECT_VIEW_PARAMS.include?(params[:view])
   end
 
   def redirect_if_show_view_param
@@ -238,16 +242,20 @@ class StoriesController < ApplicationController
   end
 
   def assign_feed_stories
-    feed = Articles::Feeds::LargeForemExperimental.new(page: @page, tag: params[:tag])
     if params[:timeframe].in?(Timeframe::FILTER_TIMEFRAMES)
-      @stories = feed.top_articles_by_timeframe(timeframe: params[:timeframe])
+      @stories = Articles::Feeds::Timeframe.call(params[:timeframe])
     elsif params[:timeframe] == Timeframe::LATEST_TIMEFRAME
-      @stories = feed.latest_feed
+      @stories = Articles::Feeds::Latest.call(minimum_score: Settings::UserExperience.home_feed_minimum_score)
     else
       @default_home_feed = true
-      @featured_story, @stories = feed.default_home_feed_and_featured_story(user_signed_in: user_signed_in?)
+      feed = Articles::Feeds::LargeForemExperimental.new(page: @page, tag: params[:tag])
+      @featured_story, @stories = feed.featured_story_and_default_home_feed(user_signed_in: user_signed_in?)
+      @stories = @stories.to_a
     end
+
+    @pinned_article = pinned_article&.decorate
     @featured_story = (featured_story || Article.new)&.decorate
+
     @stories = ArticleDecorator.decorate_collection(@stories)
   end
 
@@ -262,7 +270,7 @@ class StoriesController < ApplicationController
     @discussion_lock = @article.discussion_lock
     @user = @article.user
     @organization = @article.organization
-
+    @comments_order = fetch_sort_order
     if @article.collection
       @collection = @article.collection
 
@@ -275,13 +283,14 @@ class StoriesController < ApplicationController
     end
 
     @comments_to_show_count = @article.cached_tag_list_array.include?("discuss") ? 50 : 30
+    @comments_to_show_count = 15 unless user_signed_in?
     set_article_json_ld
     assign_co_authors
     @comment = Comment.new(body_markdown: @article&.comment_template)
   end
 
   def permission_denied?
-    !@article.published && params[:preview] != @article.password
+    (!@article.published || @article.scheduled?) && params[:preview] != @article.password
   end
 
   def assign_co_authors
@@ -292,12 +301,13 @@ class StoriesController < ApplicationController
 
   def assign_user_comments
     comment_count = helpers.comment_count(params[:view])
-    @comments = if @user.comments_count.positive?
-                  @user.comments.where(deleted: false)
-                    .order(created_at: :desc).includes(:commentable).limit(comment_count)
-                else
-                  []
-                end
+    @comments = []
+    return unless user_signed_in? && @user.comments_count.positive?
+
+    @comments = @user.comments.where(deleted: false)
+      .order(created_at: :desc)
+      .includes(commentable: [:podcast])
+      .limit(comment_count)
   end
 
   def assign_user_stories
@@ -305,6 +315,7 @@ class StoriesController < ApplicationController
       .limited_column_select
       .order(published_at: :desc).decorate
     @stories = ArticleDecorator.decorate_collection(@user.articles.published
+      .includes(:distinct_reaction_categories)
       .limited_column_select
       .where.not(id: @pinned_stories.map(&:id))
       .order(published_at: :desc).page(@page).per(user_signed_in? ? 2 : SIGNED_OUT_RECORD_COUNT))
@@ -325,14 +336,15 @@ class StoriesController < ApplicationController
   end
 
   def redirect_to_lowercase_username
-    return unless params[:username] && params[:username]&.match?(/[[:upper:]]/)
+    return unless params[:username]&.match?(/[[:upper:]]/)
 
-    redirect_permanently_to("/#{params[:username].downcase}")
+    redirect_permanently_to(action: :index, username: params[:username].downcase)
   end
 
   def set_user_json_ld
     # For more info on structuring data with JSON-LD,
     # please refer to this link: https://moz.com/blog/json-ld-for-beginners
+    decorated_user = @user.decorate
     @user_json_ld = {
       "@context": "http://schema.org",
       "@type": "Person",
@@ -342,14 +354,11 @@ class StoriesController < ApplicationController
       },
       url: URL.user(@user),
       sameAs: user_same_as,
-      image: Images::Profile.call(@user.profile_image_url, length: 320),
+      image: @user.profile_image_url_for(length: 320),
       name: @user.name,
-      email: @user.email_public ? @user.email : nil,
-      jobTitle: @user.employment_title.presence,
-      description: @user.summary.presence || "404 bio not found",
-      worksFor: [user_works_for].compact,
-      alumniOf: @user.education.presence
-    }.reject { |_, v| v.blank? }
+      email: decorated_user.profile_email,
+      description: decorated_user.profile_summary
+    }.compact_blank
   end
 
   def set_article_json_ld
@@ -407,22 +416,10 @@ class StoriesController < ApplicationController
         "@id": URL.organization(@organization)
       },
       url: URL.organization(@organization),
-      image: Images::Profile.call(@organization.profile_image_url, length: 320),
+      image: @organization.profile_image_url_for(length: 320),
       name: @organization.name,
-      description: @organization.summary.presence || "404 bio not found"
+      description: @organization.summary.presence || I18n.t("stories_controller.404_bio_not_found")
     }
-  end
-
-  def user_works_for
-    # For further examples of the worksFor properties, please refer to this
-    # link: https://jsonld.com/person/
-    return unless @user.employer_name.presence || @user.employer_url.presence
-
-    {
-      "@type": "Organization",
-      name: @user.employer_name,
-      url: @user.employer_url
-    }.reject { |_, v| v.blank? }
   end
 
   def user_same_as
@@ -431,13 +428,13 @@ class StoriesController < ApplicationController
     [
       @user.twitter_username.present? ? "https://twitter.com/#{@user.twitter_username}" : nil,
       @user.github_username.present? ? "https://github.com/#{@user.github_username}" : nil,
-      @user.website_url,
-    ].reject(&:blank?)
+      @user.profile.website_url,
+    ].compact_blank
   end
 
-  def current_search_results_ordering
-    return :relevance unless params[:sort_by] == "published_at" && params[:sort_direction].present?
+  def fetch_sort_order
+    return params[:comments_sort] if Comment::VALID_SORT_OPTIONS.include? params[:comments_sort]
 
-    params[:sort_direction] == "desc" ? :newest : :oldest
+    "top"
   end
 end

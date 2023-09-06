@@ -1,12 +1,11 @@
 import { h } from 'preact';
 import PropTypes from 'prop-types';
-import { organizationPropType } from '../common-prop-types';
 
 const orgOptions = (organizations, organizationId, emptyLabel) => {
   const orgs = organizations.map((organization) => {
     if (organizationId === organization.id) {
       return (
-        <option value={organization.id} selected>
+        <option key={organization.id} value={organization.id} selected>
           {organization.name}
         </option>
       );
@@ -60,5 +59,10 @@ OrganizationPicker.propTypes = {
   emptyLabel: PropTypes.string,
   onToggle: PropTypes.func.isRequired,
   organizationId: PropTypes.number.isRequired,
-  organizations: PropTypes.arrayOf(organizationPropType).isRequired,
+  organizations: PropTypes.arrayOf(
+    PropTypes.shape({
+      id: PropTypes.isRequired,
+      name: PropTypes.string.isRequired,
+    }),
+  ).isRequired,
 };

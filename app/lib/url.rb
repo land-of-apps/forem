@@ -4,8 +4,20 @@ module URL
     ApplicationConfig["APP_PROTOCOL"]
   end
 
+  def self.database_available?
+    ActiveRecord::Base.connected? && has_site_configs?
+  end
+
+  private_class_method :database_available?
+
+  def self.has_site_configs?
+    @has_site_configs ||= ActiveRecord::Base.connection.table_exists?("site_configs")
+  end
+
+  private_class_method :has_site_configs?
+
   def self.domain
-    if Rails.application&.initialized? && Settings::General.respond_to?(:app_domain)
+    if database_available?
       Settings::General.app_domain
     else
       ApplicationConfig["APP_DOMAIN"]
@@ -16,7 +28,7 @@ module URL
     base_url = "#{protocol}#{domain}"
     return base_url unless uri
 
-    URI.parse(base_url).merge(uri).to_s
+    Addressable::URI.parse(base_url).join(uri).normalize.to_s
   end
 
   # Creates an article URL
@@ -33,11 +45,25 @@ module URL
     url(comment.path)
   end
 
+  # Creates a fragment URL for a comment on an article page
+  # if an article path is available
+  #
+  # @param comment [Comment] the comment to create the URL for
+  # @param path [String, nil] the path of the article to anchor the
+  #   comment link instead of using the comment's permalink
+  def self.fragment_comment(comment, path:)
+    return comment(comment) if path.nil?
+
+    url("#{path}#comment-#{comment.id_code}")
+  end
+
   # Creates a reaction URL
   #
   # A reaction URL is the URL of its reactable.
   #
-  # @param reactable [Reaction] the reaction to create the URL for
+  # @param reaction [Reaction, #reactable] the reaction to create the URL for
+  # @return [String]
+  # @see .url
   def self.reaction(reaction)
     url(reaction.reactable.path)
   end
@@ -46,7 +72,11 @@ module URL
   #
   # @param tag [Tag] the tag to create the URL for
   def self.tag(tag, page = 1)
-    url(["/t/#{CGI.escape(tag.name)}", ("/page/#{page}" if page > 1)].join)
+    url([tag_path(tag), ("/page/#{page}" if page > 1)].join)
+  end
+
+  def self.tag_path(tag)
+    "/t/#{CGI.escape(tag.name)}"
   end
 
   # Creates a user URL

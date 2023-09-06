@@ -1,12 +1,17 @@
 class Page < ApplicationRecord
-  TEMPLATE_OPTIONS = %w[contained full_within_layout json].freeze
+  extend UniqueAcrossModels
+  TEMPLATE_OPTIONS = %w[contained full_within_layout nav_bar_included json].freeze
+
+  TERMS_SLUG = "terms".freeze
+  CODE_OF_CONDUCT_SLUG = "code-of-conduct".freeze
+  PRIVACY_SLUG = "privacy".freeze
 
   validates :title, presence: true
   validates :description, presence: true
-  validates :slug, presence: true, format: /\A[0-9a-z\-_]*\z/
   validates :template, inclusion: { in: TEMPLATE_OPTIONS }
   validate :body_present
-  validate :unique_slug_including_users_and_orgs, if: :slug_changed?
+
+  unique_across_models :slug
 
   before_validation :set_default_template
   before_save :evaluate_markdown
@@ -16,6 +21,30 @@ class Page < ApplicationRecord
 
   mount_uploader :social_image, ProfileImageUploader
   resourcify
+
+  # @param slug [String]
+  #
+  # @return An HTML safe String.
+  #
+  # @yield Yield to the calling context if there's no Page match for slug.
+  #
+  # @raise LocalJumpError when no matching slug nor block given.
+  #
+  # @note Yes, treating this value as HTML safe is risky.  But we already opened that vector by
+  #       letting the administrator of pages write HTML.
+  #
+  # @todo Do we want to only allow certain slugs?
+  #
+  # rubocop:disable Rails/OutputSafety
+  def self.render_safe_html_for(slug:)
+    page = find_by(slug: slug)
+    if page
+      page.processed_html.html_safe
+    else
+      yield
+    end
+  end
+  # rubocop:enable Rails/OutputSafety
 
   def self.landing_page
     find_by(landing_page: true)
@@ -27,6 +56,12 @@ class Page < ApplicationRecord
 
   def feature_flag_name
     "page_#{slug}"
+  end
+
+  def as_json(...)
+    super(...).slice(*%w[id title slug description is_top_level_path landing_page
+                         body_html body_json body_markdown processed_html
+                         social_image template ])
   end
 
   private
@@ -47,19 +82,7 @@ class Page < ApplicationRecord
   def body_present
     return unless body_markdown.blank? && body_html.blank? && body_json.blank?
 
-    errors.add(:body_markdown, "must exist if body_html or body_json doesn't exist.")
-  end
-
-  def unique_slug_including_users_and_orgs
-    slug_exists = (
-      User.exists?(username: slug) ||
-      Organization.exists?(slug: slug) ||
-      Podcast.exists?(slug: slug) ||
-      slug.include?("sitemap-")
-    )
-    return unless slug_exists
-
-    errors.add(:slug, "is taken.")
+    errors.add(:body_markdown, I18n.t("models.page.body_must_exist"))
   end
 
   # As there can only be one global landing page, we want to ensure that

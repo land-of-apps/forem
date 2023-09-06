@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe "Link on tags for post in notifications", type: :system do
+RSpec.describe "Link on tags for post in notifications" do
   let(:js_tag) { create(:tag, name: "javascript") }
   let(:ruby_tag) { create(:tag, name: "ruby") }
 
@@ -16,7 +16,6 @@ RSpec.describe "Link on tags for post in notifications", type: :system do
     it "shows the sign-with page", js: true do
       Authentication::Providers.enabled.each do |provider_name|
         provider = Authentication::Providers.get!(provider_name)
-        next if provider.provider_name == :apple && !Flipper.enabled?(:apple_auth)
 
         expect(page).to have_content("Continue with #{provider.official_name}")
       end

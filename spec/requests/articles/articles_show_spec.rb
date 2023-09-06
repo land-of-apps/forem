@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe "ArticlesShow", type: :request do
+RSpec.describe "ArticlesShow" do
   let(:user) { create(:user) }
   let(:article) { create(:article, user: user, published: true, organization: organization) }
   let(:organization) { create(:organization) }
@@ -18,7 +18,6 @@ RSpec.describe "ArticlesShow", type: :request do
       expect(response).to have_http_status(:ok)
     end
 
-    # rubocop:disable RSpec/ExampleLength
     it "renders the proper JSON-LD for an article" do
       expect(response_json).to include(
         "@context" => "http://schema.org",
@@ -57,6 +56,41 @@ RSpec.describe "ArticlesShow", type: :request do
         "dateModified" => article.published_timestamp,
       )
     end
+
+    it "renders 'posted on' information" do
+      get article.path
+      expect(response.body).to include("Posted on")
+      expect(response.body).not_to include("Scheduled for")
+    end
+  end
+
+  describe "GET /:username/:slug (scheduled)" do
+    before { allow(FeatureFlag).to receive(:enabled?).with(:consistent_rendering, any_args).and_return(true) }
+
+    let(:scheduled_article) { create(:article, published: true, published_at: Date.tomorrow) }
+    let(:query_params) { "?preview=#{scheduled_article.password}" }
+    let(:scheduled_article_path) { scheduled_article.path + query_params }
+
+    it "renders a scheduled article with the article password" do
+      get scheduled_article_path
+      expect(response).to have_http_status(:ok)
+      expect(response.body).to include(scheduled_article.title)
+    end
+
+    it "renders 'scheduled for' information" do
+      get scheduled_article_path
+      expect(response.body).to include("Scheduled for")
+      expect(response.body).not_to include("Posted on")
+    end
+
+    it "doesn't show edit link when user is not signed in" do
+      get scheduled_article_path
+      expect(response.body).not_to include("Click to edit")
+    end
+
+    it "renders 404 for a scheduled article w/o article password" do
+      expect { get scheduled_article.path }.to raise_error(ActiveRecord::RecordNotFound)
+    end
   end
 
   it "renders the proper organization for an article when one is present" do
@@ -70,13 +104,12 @@ RSpec.describe "ArticlesShow", type: :request do
           "@id" => URL.organization(organization)
         },
         "url" => URL.organization(organization),
-        "image" => Images::Profile.call(organization.profile_image_url, length: 320),
+        "image" => organization.profile_image_url_for(length: 320),
         "name" => organization.name,
         "description" => organization.summary
       },
     )
   end
-  # rubocop:enable RSpec/ExampleLength
 
   context "when keywords are set" do
     it "shows keywords" do

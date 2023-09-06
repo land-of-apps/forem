@@ -10,10 +10,21 @@ RSpec.describe Moderator::ManageActivityAndRoles, type: :service do
     described_class.handle_user_roles(
       admin: admin,
       user: user,
-      user_params: { note_for_current_role: "warning user", user_status: "Warn" },
+      user_params: { note_for_current_role: "warning user", user_status: "Warned" },
     )
-    expect(user.warned).to be true
+    expect(user.warned?).to be true
     expect(user.suspended?).to be false
+  end
+
+  it "updates user status to limited" do
+    user.add_role(:limited)
+    user.reload
+    described_class.handle_user_roles(
+      admin: admin,
+      user: user,
+      user_params: { note_for_current_role: "limited user", user_status: "Limited" },
+    )
+    expect(user.limited?).to be true
   end
 
   it "updates user to super admin" do
@@ -22,16 +33,36 @@ RSpec.describe Moderator::ManageActivityAndRoles, type: :service do
       user: user,
       user_params: { note_for_current_role: "Upgrading to super admin", user_status: "Super Admin" },
     )
-    expect(user.has_role?(:super_admin)).to be true
+    expect(user.super_admin?).to be true
+  end
+
+  it "assigns trusted role to user that's updated to super admin" do
+    described_class.handle_user_roles(
+      admin: admin,
+      user: user,
+      user_params: { note_for_current_role: "Upgrading to super admin", user_status: "Super Admin" },
+    )
+    expect(user.super_admin?).to be true
+    expect(user.has_trusted_role?).to be true
   end
 
   it "updates user to admin" do
     described_class.handle_user_roles(
       admin: admin,
       user: user,
-      user_params: { note_for_current_role: "Upgrading to super admin", user_status: "Admin" },
+      user_params: { note_for_current_role: "Upgrading to admin", user_status: "Admin" },
     )
-    expect(user.has_role?(:admin)).to be true
+    expect(user.admin?).to be true
+  end
+
+  it "assigns trusted role to user that's updated to admin" do
+    described_class.handle_user_roles(
+      admin: admin,
+      user: user,
+      user_params: { note_for_current_role: "Upgrading to admin", user_status: "Admin" },
+    )
+    expect(user.admin?).to be true
+    expect(user.has_trusted_role?).to be true
   end
 
   it "updates user to tech admin" do
@@ -40,8 +71,8 @@ RSpec.describe Moderator::ManageActivityAndRoles, type: :service do
       user: user,
       user_params: { note_for_current_role: "Upgrading to tech admin", user_status: "Tech Admin" },
     )
-    expect(user.has_role?(:tech_admin)).to be true
-    expect(user.has_role?(:single_resource_admin, DataUpdateScript)).to be true
+    expect(user.tech_admin?).to be true
+    expect(user.single_resource_admin_for?(DataUpdateScript)).to be true
   end
 
   it "updates user to single resource admin" do
@@ -50,7 +81,7 @@ RSpec.describe Moderator::ManageActivityAndRoles, type: :service do
       user: user,
       user_params: { note_for_current_role: "Upgrading to super admin", user_status: "Resource Admin: Article" },
     )
-    expect(user.has_role?(:single_resource_admin, Article)).to be true
+    expect(user.single_resource_admin_for?(Article)).to be true
   end
 
   it "updates negative role to positive role" do
@@ -58,10 +89,44 @@ RSpec.describe Moderator::ManageActivityAndRoles, type: :service do
     described_class.handle_user_roles(
       admin: admin,
       user: user,
-      user_params: { note_for_current_role: "user in good standing", user_status: "Regular Member" },
+      user_params: { note_for_current_role: "user in good standing", user_status: "Good standing" },
     )
     expect(user.suspended?).to be false
     expect(user.roles.count).to eq(0)
+  end
+
+  describe "Rack::Attack cache invalidation optimization" do
+    before do
+      cache_db = ActiveSupport::Cache.lookup_store(:redis_cache_store)
+      allow(Rails).to receive(:cache) { cache_db }
+
+      allow(Rails.cache).to receive(:delete)
+      allow(Rails.cache).to receive(:delete)
+        .with(Rack::Attack::ADMIN_API_CACHE_KEY)
+    end
+
+    it "clears Rack::Attack cache if assigned admin role to user" do
+      described_class.handle_user_roles(
+        admin: admin,
+        user: user,
+        user_params: { note_for_current_role: "Upgrading to tech admin", user_status: "Super Admin" },
+      )
+
+      expect(Rails.cache).to have_received(:delete)
+        .with(Rack::Attack::ADMIN_API_CACHE_KEY)
+    end
+
+    it "doesn't Rack::Attack cache if assigned non-admin role to user" do
+      user.add_role(:comment_suspended)
+      described_class.handle_user_roles(
+        admin: admin,
+        user: user,
+        user_params: { note_for_current_role: "Upgrading to trusted user", user_status: "Good standing" },
+      )
+
+      expect(Rails.cache).not_to have_received(:delete)
+        .with(Rack::Attack::ADMIN_API_CACHE_KEY)
+    end
   end
 
   context "when not super admin" do
@@ -96,6 +161,16 @@ RSpec.describe Moderator::ManageActivityAndRoles, type: :service do
           admin: admin,
           user: user,
           user_params: { note_for_current_role: "Upgrading to super admin", user_status: "Resource Admin: Article" },
+        )
+      end.to raise_error(StandardError)
+    end
+
+    it "updates user to super moderator" do
+      expect do
+        described_class.handle_user_roles(
+          admin: admin,
+          user: user,
+          user_params: { note_for_current_role: "Upgrading to super_moderator", user_status: "Super Moderator" },
         )
       end.to raise_error(StandardError)
     end

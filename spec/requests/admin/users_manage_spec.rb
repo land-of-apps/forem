@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe "Admin::Users", type: :request do
+RSpec.describe "Admin::Users" do
   let!(:user) { create(:user, twitter_username: nil, old_username: "username") }
   let!(:user2) { create(:user, twitter_username: "Twitter") }
   let(:user3) { create(:user) }
@@ -49,7 +49,6 @@ RSpec.describe "Admin::Users", type: :request do
       badge_id: badge.id,
       rewarding_context_message_markdown: "message",
     )
-    ChatChannels::CreateWithUsers.call(users: [user2, user3], channel_type: "direct")
     user2.follow(user3)
     user.follow(super_admin)
     user3.follow(user2)
@@ -87,14 +86,12 @@ RSpec.describe "Admin::Users", type: :request do
 
     it "merges all relationships" do
       expected_follows_count = user.follows.count + user2.follows.count
-      expected_channel_memberships_count = user.chat_channel_memberships.count + user2.chat_channel_memberships.count
       expected_mentions_count = user.mentions.count + user2.mentions.count
 
       post merge_admin_user_path(user.id), params: { user: { merge_user_id: user2.id } }
 
       expect(user.follows.count).to eq(expected_follows_count)
       expect(Follow.followable_user(user.id).count).to eq(1)
-      expect(user.chat_channel_memberships.count).to eq(expected_channel_memberships_count)
       expect(user.mentions.count).to eq(expected_mentions_count)
     end
 
@@ -110,22 +107,42 @@ RSpec.describe "Admin::Users", type: :request do
 
       expect(user.reload.twitter_username).to eq("Twitter")
     end
+
+    it "merges an identity on a single account into the other" do
+      omniauth_mock_twitter_payload
+      omniauth_mock_github_payload
+      create(:identity, user: user, provider: "twitter")
+      deleted_user_identity = create(:identity, user: user2)
+
+      post merge_admin_user_path(user.id), params: { user: { merge_user_id: user2.id } }
+
+      expect(user.identities.count).to eq 2
+      expect(user.identity_ids).to include deleted_user_identity.id
+    end
   end
 
   context "when managing activity and roles" do
     it "adds comment suspend role" do
-      params = { user: { user_status: "Comment Suspend", note_for_current_role: "comment suspend this user" } }
+      params = { user: { user_status: "Comment Suspended", note_for_current_role: "comment suspend this user" } }
       patch user_status_admin_user_path(user.id), params: params
 
       expect(user.roles.first.name).to eq("comment_suspended")
       expect(Note.first.content).to eq("comment suspend this user")
     end
 
+    it "adds limited role" do
+      params = { user: { user_status: "Limited", note_for_current_role: "limited role added" } }
+      patch user_status_admin_user_path(user.id), params: params
+
+      expect(user.roles.first.name).to eq("limited")
+      expect(Note.first.content).to eq("limited role added")
+    end
+
     it "selects new role for user" do
       user.add_role(:trusted)
       user.reload
 
-      params = { user: { user_status: "Comment Suspend", note_for_current_role: "comment suspend this user" } }
+      params = { user: { user_status: "Comment Suspended", note_for_current_role: "comment suspend this user" } }
       patch user_status_admin_user_path(user.id), params: params
 
       expect(user.roles.count).to eq(1)
@@ -139,8 +156,7 @@ RSpec.describe "Admin::Users", type: :request do
       params = { user: { user_status: "Super Admin", note_for_current_role: "they deserve it for some reason" } }
       patch user_status_admin_user_path(user.id), params: params
 
-      expect(user.roles.count).to eq(1)
-      expect(user.roles.last.name).to eq("super_admin")
+      expect(user.super_admin?).to be(true)
     end
 
     it "does not allow non-super-admin to doll out admin" do
@@ -151,7 +167,7 @@ RSpec.describe "Admin::Users", type: :request do
       params = { user: { user_status: "Super Admin", note_for_current_role: "they deserve it for some reason" } }
       patch user_status_admin_user_path(user.id), params: params
 
-      expect(user.has_role?(:super_admin)).not_to be false
+      expect(user.super_admin?).not_to be false
     end
 
     it "creates a general note on the user" do
@@ -166,50 +182,28 @@ RSpec.describe "Admin::Users", type: :request do
     end
 
     it "removes non-admin roles from non-super_admin users", :aggregate_failures do
-      user.add_role(:trusted)
+      role = user.add_role(:trusted)
 
       expect do
-        delete admin_user_path(user.id), params: { user_id: user.id, role: :trusted }
+        delete admin_user_path(user.id), params: { user_id: user.id, role_id: role.id }
       end.to change(user.roles, :count).by(-1)
 
-      expect(user.has_role?(:trusted)).to be false
+      expect(user.has_trusted_role?).to be false
       expect(request.flash["success"]).to include("successfully removed from the user!")
     end
 
     it "removes the correct resource_admin_role from non-super_admin users", :aggregate_failures do
-      user.add_role(:single_resource_admin, Comment)
+      role = user.add_role(:single_resource_admin, Comment)
       user.add_role(:single_resource_admin, Broadcast)
 
       expect do
         delete admin_user_path(user.id),
-               params: { user_id: user.id, role: :single_resource_admin, resource_type: Comment }
+               params: { user_id: user.id, role_id: role.id, resource_type: Comment }
       end.to change(user.roles, :count).by(-1)
 
-      expect(user.has_role?(:single_resource_admin, Comment)).to be false
-      expect(user.has_role?(:single_resource_admin, Broadcast)).to be true
+      expect(user.single_resource_admin_for?(Comment)).to be false
+      expect(user.single_resource_admin_for?(Broadcast)).to be true
       expect(request.flash["success"]).to include("successfully removed from the user!")
-    end
-
-    it "does not allow super_admin roles to be removed", :aggregate_failures do
-      user.add_role(:super_admin)
-
-      expect do
-        delete admin_user_path(user.id), params: { user_id: user.id, role: :super_admin }
-      end.not_to change(user.roles, :count)
-
-      expect(user.has_role?(:super_admin)).to be true
-      expect(request.flash["danger"]).to include("cannot be removed.")
-    end
-
-    it "does not allow a admins to remove a role from themselves", :aggregate_failures do
-      super_admin.add_role(:trusted)
-
-      expect do
-        delete admin_user_path(super_admin.id), params: { user_id: super_admin.id, role: :trusted }
-      end.not_to change(super_admin.roles, :count)
-
-      expect(super_admin.has_role?(:trusted)).to be true
-      expect(request.flash["danger"]).to include("cannot remove roles")
     end
   end
 
@@ -300,4 +294,5 @@ RSpec.describe "Admin::Users", type: :request do
       expect(super_admin.reload.unspent_credits_count).to eq 5
     end
   end
+  # rubocop:enable RSpec/IndexedLet
 end

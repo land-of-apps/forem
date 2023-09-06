@@ -6,7 +6,6 @@ module IncomingWebhooks
 
     LIST_MAPPINGS = {
       mailchimp_newsletter_id: :email_newsletter,
-      mailchimp_sustaining_members_id: :email_membership_newsletter,
       mailchimp_tag_moderators_id: :email_tag_mod_newsletter,
       mailchimp_community_moderators_id: :email_community_mod_newsletter
     }.freeze
@@ -18,7 +17,7 @@ module IncomingWebhooks
     def create
       not_authorized unless valid_secret?
       user = User.find_by!(email: params.dig(:data, :email))
-      user.update(email_type => false)
+      user.notification_setting.update(email_type => false)
     end
 
     private

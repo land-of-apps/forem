@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe "Using the editor", type: :system do
+RSpec.describe "Using the editor" do
   let(:user) { create(:user) }
   let(:raw_text) { "../support/fixtures/sample_article_template_spec.txt" }
   # what are these
@@ -23,7 +23,7 @@ RSpec.describe "Using the editor", type: :system do
   end
 
   describe "Viewing the editor", js: true do
-    it "renders the logo_svg or Community name as expected" do
+    it "renders the logo or Community name as expected" do
       visit "/new"
       expect(page).to have_css(".site-logo")
       within(".truncate-at-2") do
@@ -58,7 +58,7 @@ RSpec.describe "Using the editor", type: :system do
   end
 
   describe "Submitting an article with v1 editor", js: true do
-    before { user.update!(editor_version: "v1") }
+    before { user.setting.update!(editor_version: "v1") }
 
     it "fill out form and submit", cloudinary: true do
       fill_markdown_with(read_from_file(raw_text))
@@ -98,12 +98,15 @@ RSpec.describe "Using the editor", type: :system do
   describe "using v2 editor", js: true do
     it "fill out form with rich content and click publish" do
       visit "/new"
-      fill_in "article-form-title", with: "This is a test"
-      fill_in "tag-input", with: "What, Yo"
-      fill_in "article_body_markdown", with: "Hello"
-      find("button", text: /\APublish\z/).click
+      within "form#article-form" do
+        fill_in "article-form-title", with: "This is a <span> test"
+        find_by_id("tag-input").native.send_keys("what", :return)
+        fill_in "article_body_markdown", with: "Hello"
+      end
+      click_button "Publish"
+      expect(page).to have_xpath("//div[@class='crayons-article__header__meta']//h1")
       expect(page).to have_text("Hello")
-      expect(page).to have_link("#what", href: "/t/what")
+      expect(page).to have_link("what", href: "/t/what")
     end
   end
 end

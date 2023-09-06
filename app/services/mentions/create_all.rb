@@ -3,12 +3,12 @@ module Mentions
   # This class will check to see if there are any @-mentions in the post, and will
   # create the associated mentions inline if necessary.
   class CreateAll
-    def initialize(notifiable)
-      @notifiable = notifiable
-    end
-
     def self.call(...)
       new(...).call
+    end
+
+    def initialize(notifiable)
+      @notifiable = notifiable
     end
 
     def call
@@ -24,7 +24,7 @@ module Mentions
       mentioned_usernames = extract_usernames_from_mentions_in_text
 
       collect_existing_users(mentioned_usernames)
-        .yield_self do |existing_mentioned_users|
+        .then do |existing_mentioned_users|
           reject_notifiable_author(existing_mentioned_users)
         end
     end
@@ -41,9 +41,11 @@ module Mentions
       # The "mentioned-user" css is added by Html::Parser#user_link_if_exists
       doc = Nokogiri::HTML(notifiable.processed_html)
 
-      # Remove any mentions that are embedded within a comment liquid tag
+      # Remove any mentions that are embedded within any liquid tags
       non_liquid_tag_mentions = doc.css(".mentioned-user").reject do |tag|
-        tag.ancestors(".liquid-comment").any?
+        tag.ancestors(".liquid-comment").any? ||
+          tag.ancestors("[class^=ltag]").any? ||
+          tag.ancestors("[class*=' ltag']").any?
       end
 
       non_liquid_tag_mentions.map { |link| link.text.delete("@").downcase }

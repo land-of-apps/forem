@@ -23,7 +23,6 @@ class PagesController < ApplicationController
   end
 
   def badge
-    @html_variant = HtmlVariant.find_for_test([], "badge_landing_page")
     render layout: false
     set_surrogate_key_header "badge_page"
   end
@@ -83,9 +82,10 @@ class PagesController < ApplicationController
   end
 
   def report_abuse
+    billboard_url = admin_billboard_path(params[:billboard]) if params[:billboard].present?
     reported_url = params[:reported_url] || params[:url] || request.referer.presence
     @feedback_message = FeedbackMessage.new(
-      reported_url: reported_url&.chomp("?i=i"),
+      reported_url: billboard_url || reported_url&.chomp("?i=i"),
     )
     render "pages/report_abuse"
   end
@@ -119,7 +119,7 @@ class PagesController < ApplicationController
 
   def redirect_daily_thread_request(daily_thread)
     if daily_thread
-      redirect_to(URI.parse(daily_thread.path).path)
+      redirect_to(Addressable::URI.parse(daily_thread.path).path)
     else
       redirect_to(notifications_path)
     end

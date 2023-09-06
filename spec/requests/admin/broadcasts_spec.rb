@@ -1,7 +1,7 @@
 require "rails_helper"
 require "requests/shared_examples/internal_policy_dependant_request"
 
-RSpec.describe "/admin/advanced/broadcasts", type: :request do
+RSpec.describe "/admin/advanced/broadcasts" do
   let(:get_resource) { get admin_broadcasts_path }
   let(:params) { { title: "Hello!", processed_html: "<p>Hello!</p>", type_of: "Welcome", active: true } }
   let(:post_resource) { post admin_broadcasts_path, params: params }
@@ -69,7 +69,6 @@ RSpec.describe "/admin/advanced/broadcasts", type: :request do
         expect do
           delete admin_broadcast_path(broadcast.id)
         end.to change { Broadcast.all.count }.by(-1)
-        expect(response.body).to redirect_to admin_broadcasts_path
       end
     end
   end
@@ -101,7 +100,6 @@ RSpec.describe "/admin/advanced/broadcasts", type: :request do
         expect do
           delete admin_broadcast_path(broadcast.id)
         end.to change { Broadcast.all.count }.by(-1)
-        expect(response.body).to redirect_to admin_broadcasts_path
       end
     end
   end
@@ -136,7 +134,7 @@ RSpec.describe "/admin/advanced/broadcasts", type: :request do
       it "does not allow a second broadcast to be set to active" do
         expect do
           post_resource
-        end.to change { Broadcast.all.count }.by(0)
+        end.not_to change { Broadcast.all.count }
       end
     end
 

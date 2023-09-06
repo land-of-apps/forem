@@ -9,11 +9,8 @@ class CommentsController < ApplicationController
 
   # GET /comments
   # GET /comments.json
-  # rubocop:disable Metrics/CyclomaticComplexity
-  # rubocop:disable Metrics/PerceivedComplexity
   def index
     skip_authorization
-    @on_comments_page = true
     @comment = Comment.new
     @podcast = Podcast.find_by(slug: params[:username])
 
@@ -23,25 +20,16 @@ class CommentsController < ApplicationController
       @user = @podcast
       @commentable = @user.podcast_episodes.find_by(slug: params[:slug]) if @user.podcast_episodes
     else
-      @user = User.find_by(username: params[:username]) ||
-        Organization.find_by(slug: params[:username]) ||
-        not_found
-      @commentable = @root_comment&.commentable ||
-        @user.articles.find_by(slug: params[:slug]) || nil
-      @article = @commentable
-
-      not_found if @commentable && !@commentable.published
+      set_user
+      set_commentable
+      @discussion_lock = @commentable.discussion_lock if @commentable.is_a?(Article)
+      not_found unless comment_should_be_visible?
     end
 
     @commentable_type = @commentable.class.name if @commentable
 
     set_surrogate_key_header "comments-for-#{@commentable.id}-#{@commentable_type}" if @commentable
-
-    render :deleted_commentable_comment unless @commentable
   end
-  # rubocop:enable Metrics/CyclomaticComplexity
-  # rubocop:enable Metrics/PerceivedComplexity
-
   # GET /comments/1
   # GET /comments/1.json
   # GET /comments/1/edit
@@ -57,30 +45,18 @@ class CommentsController < ApplicationController
   # POST /comments.json
   def create
     rate_limit!(rate_limit_to_use)
+    @comment = CommentCreator.build_comment(permitted_attributes(Comment), current_user: current_user)
 
-    @comment = Comment.new(permitted_attributes(Comment))
-    @comment.user_id = current_user.id
-
+    # authorize & permit depend on @comment
     authorize @comment
+    permit_commenter
 
     if @comment.save
-      checked_code_of_conduct = params[:checked_code_of_conduct].present? && !current_user.checked_code_of_conduct
-      current_user.update(checked_code_of_conduct: true) if checked_code_of_conduct
-
-      NotificationSubscription.create(
-        user: current_user, notifiable_id: @comment.id, notifiable_type: "Comment", config: "all_comments",
-      )
-      Notification.send_new_comment_notifications_without_delay(@comment)
-      Mention.create_all(@comment)
-
       if @comment.invalid?
-        @comment.destroy
-        render json: { error: "comment already exists" }, status: :unprocessable_entity
+        render json: { error: I18n.t("comments_controller.create.failure") }, status: :unprocessable_entity
         return
       end
-
       render partial: "comments/comment", formats: :json
-
     elsif (comment = Comment.where(
       body_markdown: @comment.body_markdown,
       commentable_id: @comment.commentable_id,
@@ -88,19 +64,25 @@ class CommentsController < ApplicationController
     )[1])
 
       comment.destroy
-      render json: { error: "comment already exists" }, status: :unprocessable_entity
+      render json: { error: I18n.t("comments_controller.create.failure") }, status: :unprocessable_entity
     else
       message = @comment.errors_as_sentence
       render json: { error: message }, status: :unprocessable_entity
     end
-  # See https://github.com/thepracticaldev/dev.to/pull/5485#discussion_r366056925
+
+  # See https://github.com/forem/forem/pull/5485#discussion_r366056925
   # for details as to why this is necessary
-  rescue Pundit::NotAuthorizedError, RateLimitChecker::LimitReached
+  rescue ModerationUnauthorizedError => e
+    render json: { error: e.message }, status: :unprocessable_entity
+  rescue Pundit::NotAuthorizedError => e
+    message = I18n.t("comments_controller.create.authorization_error", error: e)
+    render json: { error: message }, status: :unauthorized
+  rescue RateLimitChecker::LimitReached
     raise
   rescue StandardError => e
     skip_authorization
 
-    message = "There was an error in your markdown: #{e}"
+    message = I18n.t("comments_controller.markdown", error: e)
     render json: { error: message }, status: :unprocessable_entity
   end
 
@@ -120,18 +102,18 @@ class CommentsController < ApplicationController
       Notification.send_new_comment_notifications_without_delay(@comment)
       Mention.create_all(@comment)
 
-      render json: { status: "created", path: @comment.path }
+      render json: { status: I18n.t("comments_controller.create.success"), path: @comment.path }
     elsif (@comment = Comment.where(body_markdown: @comment.body_markdown,
                                     commentable_id: @comment.commentable.id,
                                     ancestry: @comment.ancestry)[0])
-      render json: { status: "comment already exists" }, status: :conflict
+      render json: { status: I18n.t("comments_controller.create.failure") }, status: :conflict
     else
       render json: { status: @comment&.errors&.full_messages&.to_sentence }, status: :unprocessable_entity
     end
   rescue StandardError => e
     skip_authorization
 
-    message = "There was an error in your markdown: #{e}"
+    message = I18n.t("comments_controller.markdown", error: e)
     render json: { error: "error", status: message }, status: :unprocessable_entity
   end
 
@@ -152,7 +134,6 @@ class CommentsController < ApplicationController
       # cache.
       #
       # https://github.com/forem/forem/issues/10338#issuecomment-693401481
-      @on_comments_page = true
       @root_comment = @comment
       @commentable = @comment.commentable
       @commentable_type = @comment.commentable_type
@@ -171,11 +152,12 @@ class CommentsController < ApplicationController
       render :index
     else
       @commentable = @comment.commentable
+      flash.now[:error] = I18n.t("comments_controller.markdown", error: @commentable.errors_as_sentence)
       render :edit
     end
   rescue StandardError => e
     @commentable = @comment.commentable
-    flash.now[:error] = "There was an error in your markdown: #{e}"
+    flash.now[:error] = I18n.t("comments_controller.markdown", error: e)
     render :edit
   end
 
@@ -192,7 +174,7 @@ class CommentsController < ApplicationController
     redirect = @comment.commentable&.path || user_path(current_user)
     # NOTE: Brakeman doesn't like redirecting to a path, because of a "possible
     # unprotected redirect". Using URI.parse().path is the recommended workaround.
-    redirect_to URI.parse(redirect).path, notice: "Comment was successfully deleted."
+    redirect_to Addressable::URI.parse(redirect).path, notice: I18n.t("comments_controller.delete.notice")
   end
 
   def delete_confirm
@@ -204,11 +186,16 @@ class CommentsController < ApplicationController
     skip_authorization
     begin
       permitted_body_markdown = permitted_attributes(Comment)[:body_markdown]
-      fixed_body_markdown = MarkdownProcessor::Fixer::FixForPreview.call(permitted_body_markdown)
-      parsed_markdown = MarkdownProcessor::Parser.new(fixed_body_markdown, source: Comment.new, user: current_user)
-      processed_html = parsed_markdown.finalize
+      if FeatureFlag.enabled?(:consistent_rendering, FeatureFlag::Actor[current_user])
+        renderer = ContentRenderer.new(permitted_body_markdown, source: self, user: current_user)
+        processed_html = renderer.process.processed_html
+      else
+        fixed_body_markdown = MarkdownProcessor::Fixer::FixForPreview.call(permitted_body_markdown)
+        parsed_markdown = MarkdownProcessor::Parser.new(fixed_body_markdown, source: Comment.new, user: current_user)
+        processed_html = parsed_markdown.finalize
+      end
     rescue StandardError => e
-      processed_html = "<p>😔 There was an error in your markdown</p><hr><p>#{e}</p>"
+      processed_html = I18n.t("comments_controller.markdown_html", error: e)
     end
     respond_to do |format|
       format.json { render json: { processed_html: processed_html }, status: :ok }
@@ -230,10 +217,15 @@ class CommentsController < ApplicationController
   def hide
     @comment = Comment.find(params[:comment_id])
     authorize @comment
-    @comment.hidden_by_commentable_user = true
-    @comment&.commentable&.update_column(:any_comments_hidden, true)
+    success = @comment.update(hidden_by_commentable_user: true)
 
-    if @comment.save
+    if success
+      @comment&.commentable&.update_column(:any_comments_hidden, true)
+      if params[:hide_children] == "1"
+        @comment.descendants.includes(:user, :commentable).each do |c|
+          c.update(hidden_by_commentable_user: true)
+        end
+      end
       render json: { hidden: "true" }, status: :ok
     else
       render json: { errors: @comment.errors_as_sentence, status: 422 }, status: :unprocessable_entity
@@ -263,8 +255,8 @@ class CommentsController < ApplicationController
     if @comment.save
       redirect_url = @comment.commentable&.path
       if redirect_url
-        flash[:success] = "Comment was successfully deleted."
-        redirect_to URI.parse(redirect_url).path
+        flash[:success] = I18n.t("comments_controller.delete.notice")
+        redirect_to Addressable::URI.parse(redirect_url).path
       else
         redirect_to_comment_path
       end
@@ -275,13 +267,33 @@ class CommentsController < ApplicationController
 
   private
 
+  def comment_should_be_visible?
+    if @article
+      @article.published?
+    else
+      @root_comment
+    end
+  end
+
+  def set_user
+    @user = User.find_by(username: params[:username]) ||
+      Organization.find_by(slug: params[:username]) ||
+      not_found
+  end
+
+  def set_commentable
+    @commentable = @root_comment&.commentable ||
+      @user.articles.find_by(slug: params[:slug]) || nil
+    @article = @commentable if @commentable.is_a?(Article)
+  end
+
   # Use callbacks to share common setup or constraints between actions.
   def set_comment
     @comment = Comment.find(params[:id])
   end
 
   def redirect_to_comment_path
-    flash[:error] = "Something went wrong; Comment NOT deleted."
+    flash[:error] = I18n.t("comments_controller.delete.error")
     redirect_to "#{@comment.path}/mod"
   end
 
@@ -291,5 +303,27 @@ class CommentsController < ApplicationController
     else
       :comment_creation
     end
+  end
+
+  def permit_commenter
+    return unless user_blocked?
+
+    raise ModerationUnauthorizedError, I18n.t("comments_controller.moderated")
+  end
+
+  def user_blocked?
+    return false if current_user.blocked_by_count.zero?
+
+    blocked_by_commentable_author = UserBlock.blocking?(@comment.commentable.user_id, current_user.id)
+    blocked_by_comment_author = @comment.parent && UserBlock.blocking?(@comment.parent.user_id, current_user.id)
+
+    blocked_by_commentable_author || blocked_by_comment_author || blocker_upthread?(@comment.parent)
+  end
+
+  def blocker_upthread?(comment)
+    return false unless comment&.parent
+
+    thread_authors_ids = comment.ancestors.pluck(:user_id)
+    UserBlock.exists?(blocker_id: thread_authors_ids, blocked_id: current_user.id)
   end
 end

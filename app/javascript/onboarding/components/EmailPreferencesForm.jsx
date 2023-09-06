@@ -24,13 +24,13 @@ export class EmailPreferencesForm extends Component {
   onSubmit() {
     const csrfToken = getContentOfToken('csrf-token');
 
-    fetch('/onboarding_checkbox_update', {
+    fetch('/onboarding/notifications', {
       method: 'PATCH',
       headers: {
         'X-CSRF-Token': csrfToken,
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ user: this.state }),
+      body: JSON.stringify({ notifications: this.state }),
       credentials: 'same-origin',
     }).then((response) => {
       if (response.ok) {
@@ -54,7 +54,7 @@ export class EmailPreferencesForm extends Component {
     return (
       <div
         data-testid="onboarding-email-preferences-form"
-        className="onboarding-main crayons-modal"
+        className="onboarding-main crayons-modal crayons-modal--large"
       >
         <div
           className="crayons-modal__box"
@@ -62,12 +62,6 @@ export class EmailPreferencesForm extends Component {
           aria-labelledby="title"
           aria-describedby="subtitle"
         >
-          <Navigation
-            prev={prev}
-            next={this.onSubmit}
-            slidesCount={slidesCount}
-            currentSlideIndex={currentSlideIndex}
-          />
           <div className="onboarding-content terms-and-conditions-wrapper">
             <header className="onboarding-content-header">
               <h1 id="title" className="title">
@@ -111,6 +105,12 @@ export class EmailPreferencesForm extends Component {
               </fieldset>
             </form>
           </div>
+          <Navigation
+            prev={prev}
+            next={this.onSubmit}
+            slidesCount={slidesCount}
+            currentSlideIndex={currentSlideIndex}
+          />
         </div>
       </div>
     );

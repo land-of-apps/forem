@@ -68,6 +68,33 @@ module OmniauthHelpers
     },
   ).freeze
 
+  OMNIAUTH_PAYLOAD_FOREM = OmniAuth::AuthHash::InfoHash.new(
+    {
+      provider: "forem",
+      uid: SecureRandom.hex,
+      info: {
+        email: "sloan@dev.to",
+        name: "Sloan",
+        image: "https://dummyimage.com/400x400.jpg",
+        user_nickname: "sloan"
+      },
+      credentials: {
+        token: SecureRandom.hex,
+        refresh_token: SecureRandom.hex,
+        expires_at: 1_589_475_606,
+        expires: true
+      },
+      extra: {
+        raw_info: {
+          email: "slaon@dev.to",
+          id: "31047",
+          name: "Sloan",
+          remote_profile_image_url: "https://dummyimage.com/400x400.jpg"
+        }
+      }
+    },
+  ).freeze
+
   OMNIAUTH_PAYLOAD_APPLE = OmniAuth::AuthHash::InfoHash.new(
     {
       provider: "apple",
@@ -103,6 +130,55 @@ module OmniauthHelpers
           id_info: {
             auth_time: 1_589_472_002
           }
+        }
+      }
+    },
+  ).freeze
+
+  OMNIAUTH_PAYLOAD_GOOGLE_OAUTH2 = OmniAuth::AuthHash::InfoHash.new(
+    {
+      "provider" => "google_oauth2",
+      "uid" => "100000000000000000000",
+      "info" => {
+        "name" => "fname lname",
+        "email" => "john@example.com",
+        "first_name" => "fname",
+        "last_name" => "lname",
+        "image" => "https://dummyimage.com/400x400.jpg",
+        "urls" => {
+          "google" => "https://plus.google.com/+JohnSmith"
+        }
+      },
+      "credentials" => {
+        "token" => "TOKEN",
+        "refresh_token" => "REFRESH_TOKEN",
+        "expires_at" => 1_496_120_719,
+        "expires" => true
+      },
+      "extra" => {
+        "id_token" => "ID_TOKEN",
+        "id_info" => {
+          "azp" => "APP_ID",
+          "aud" => "APP_ID",
+          "sub" => "100000000000000000000",
+          "email" => "john@example.com",
+          "email_verified" => true,
+          "at_hash" => "HK6E_P6Dh8Y93mRNtsDB1Q",
+          "iss" => "accounts.google.com",
+          "iat" => 1_496_117_119,
+          "exp" => 1_496_120_719
+        },
+        "raw_info" => {
+          "sub" => "100000000000000000000",
+          "name" => "fname lname",
+          "given_name" => "fname",
+          "family_name" => "lname",
+          "profile" => "https://plus.google.com/+JohnSmith",
+          "picture" => "https://dummyimage.com/400x400.jpg",
+          "email" => "john@example.com",
+          "email_verified" => "true",
+          "locale" => "en",
+          "hd" => "company.com"
         }
       }
     },
@@ -163,8 +239,16 @@ module OmniauthHelpers
     OmniAuth.config.mock_auth[:facebook] = OMNIAUTH_PAYLOAD_FACEBOOK.dup
   end
 
+  def omniauth_mock_forem_payload
+    OmniAuth.config.mock_auth[:forem] = OMNIAUTH_PAYLOAD_FOREM.dup
+  end
+
   def omniauth_mock_apple_payload
     OmniAuth.config.mock_auth[:apple] = OMNIAUTH_PAYLOAD_APPLE.dup
+  end
+
+  def omniauth_mock_google_oauth2_payload
+    OmniAuth.config.mock_auth[:google_oauth2] = OMNIAUTH_PAYLOAD_GOOGLE_OAUTH2.dup
   end
 
   def omniauth_mock_github_payload

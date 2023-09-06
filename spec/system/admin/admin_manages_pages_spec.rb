@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe "Admin manages pages", type: :system do
+RSpec.describe "Admin manages pages" do
   let(:admin) { create(:user, :super_admin) }
 
   before do
@@ -80,17 +80,20 @@ RSpec.describe "Admin manages pages", type: :system do
   describe "when the defaults are overridden" do
     before do
       create(:page,
+             :without_validations, # validations prevent reserved_word "code-of-conduct"
              slug: "code-of-conduct",
              body_html: "<div>Code of Conduct</div>",
              title: "Code of Conduct",
              description: "A page that describes how to behave on this platform",
              is_top_level_path: true)
       create(:page,
+             :without_validations, # validations prevent reserved_word "privacy"
              slug: "privacy",
              body_html: "<div>Privacy Policy</div>",
              title: "Privacy Policy",
              description: "A page that describes the privacy policy", is_top_level_path: true)
       create(:page,
+             :without_validations, # validations prevent reserved_word "terms"
              slug: "terms",
              body_html: "<div>Terms of Use</div>",
              title: "Terms of Use",
@@ -100,11 +103,11 @@ RSpec.describe "Admin manages pages", type: :system do
       visit admin_pages_path
     end
 
-    it "shows the notice that the defaults have been overriden" do
+    it "shows the notice that the defaults have been overridden" do
       expect(page).to have_content("You will no longer receive updates on these pages from the Forem team")
     end
 
-    it "shows the overriden pages in the pages table" do
+    it "shows the overridden pages in the pages table" do
       within(".pages__table") do
         expect(page).to have_content("Terms of Use")
         expect(page).to have_content("Code of Conduct")
@@ -124,7 +127,7 @@ RSpec.describe "Admin manages pages", type: :system do
 
       it "allows a landing page to be updated", :aggregate_failures do
         visit edit_admin_page_path(current_landing_page.id)
-        expect(page).to have_content("Use as 'Locked Screen")
+        expect(page).to have_content("Use as 'Locked Screen'")
         uncheck "Use as 'Locked Screen'"
         click_on("Update Page")
         expect(page).to have_current_path(admin_pages_path)
@@ -132,7 +135,7 @@ RSpec.describe "Admin manages pages", type: :system do
 
       it "allows an Admin to click through to the current landing page via the modal", :aggregate_failures do
         visit edit_admin_page_path(new_landing_page.id)
-        expect(page).to have_content("Use as 'Locked Screen")
+        expect(page).to have_content("Use as 'Locked Screen'")
         check "Use as 'Locked Screen'"
         expect(page).to have_link("Current Locked Screen: #{new_landing_page.title}")
         click_on("Current Locked Screen")
@@ -142,7 +145,7 @@ RSpec.describe "Admin manages pages", type: :system do
 
       it "allows an Admin to overwrite the current landing page via the checkbox and modal", :aggregate_failures do
         visit edit_admin_page_path(new_landing_page.id)
-        expect(page).to have_content("Use as 'Locked Screen")
+        expect(page).to have_content("Use as 'Locked Screen'")
         check "Use as 'Locked Screen'"
         expect(page).to have_link("Current Locked Screen: #{new_landing_page.title}")
         click_on("Overwrite current locked screen")
@@ -155,7 +158,7 @@ RSpec.describe "Admin manages pages", type: :system do
       it "does not give admins the option to set a lock screen" do
         allow(ForemInstance).to receive(:private).and_return(false)
         visit edit_admin_page_path(new_landing_page.id)
-        expect(page).not_to have_content("Use as 'Locked Screen")
+        expect(page).not_to have_content("Use as 'Locked Screen'")
       end
     end
   end

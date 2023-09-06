@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe "IncomingWebhooks::MailchimpUnsubscribesController", type: :request do
+RSpec.describe "IncomingWebhooks::MailchimpUnsubscribesController" do
   let(:user) { create(:user, :with_newsletters) }
   let(:secret) { "secret" }
 
@@ -30,7 +30,7 @@ RSpec.describe "IncomingWebhooks::MailchimpUnsubscribesController", type: :reque
 
       expect do
         post "/incoming_webhooks/mailchimp/#{secret}/unsubscribe", params: params
-      end.to change { user.reload.email_newsletter }.from(true).to(false)
+      end.to change { user.reload.notification_setting.email_newsletter }.from(true).to(false)
     end
   end
 end

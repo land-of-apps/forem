@@ -25,7 +25,7 @@ module Mailchimp
         gibbon.lists(Settings::General.mailchimp_newsletter_id).members(target_md5_email).upsert(
           body: {
             email_address: user.email,
-            status: user.email_newsletter ? "subscribed" : "unsubscribed",
+            status: user.notification_setting.email_newsletter ? "subscribed" : "unsubscribed",
             merge_fields: {
               NAME: user.name.to_s,
               USERNAME: user.username.to_s,
@@ -35,22 +35,23 @@ module Mailchimp
               ARTICLES: user.articles.size,
               COMMENTS: user.comments.size,
               ONBOARD_PK: user.onboarding_package_requested.to_s,
-              EXPERIENCE: user.experience_level || 666
+              EXPERIENCE: user.setting.experience_level || 666
             }
           },
         )
 
         success = true
+      rescue Gibbon::GibbonError => e
+        report_error(e)
       rescue Gibbon::MailChimpError => e
-        # If user was previously subscribed, set their status to "pending"
-        return resubscribe_to_newsletter if previously_subcribed?(e)
+        return resubscribe_as_pending if previously_subscribed?(e)
 
         report_error(e)
       end
       success
     end
 
-    def resubscribe_to_newsletter
+    def resubscribe_as_pending
       success = false
 
       begin
@@ -65,10 +66,10 @@ module Mailchimp
     end
 
     def manage_community_moderator_list
-      return false unless Settings::General.mailchimp_community_moderators_id.present? && user.has_role?(:trusted)
+      return false unless Settings::General.mailchimp_community_moderators_id.present? && user.has_trusted_role?
 
       success = false
-      status = user.email_community_mod_newsletter ? "subscribed" : "unsubscribed"
+      status = user.notification_setting.email_community_mod_newsletter ? "subscribed" : "unsubscribed"
       begin
         gibbon.lists(Settings::General.mailchimp_community_moderators_id).members(target_md5_email).upsert(
           body: {
@@ -95,10 +96,9 @@ module Mailchimp
 
       success = false
 
-      tag_ids = user.roles.where(name: "tag_moderator").pluck(:resource_id)
-      tag_names = Tag.where(id: tag_ids).pluck(:name)
+      tag_names = user.moderator_for_tags_not_cached
 
-      status = user.email_tag_mod_newsletter ? "subscribed" : "unsubscribed"
+      status = user.notification_setting.email_tag_mod_newsletter ? "subscribed" : "unsubscribed"
 
       begin
         gibbon.lists(Settings::General.mailchimp_tag_moderators_id).members(target_md5_email).upsert(
@@ -122,47 +122,24 @@ module Mailchimp
       success
     end
 
-    def unsub_sustaining_member
-      return unless Settings::General.mailchimp_sustaining_members_id.present? && a_sustaining_member?
+    def remove_community_mod
+      return unless Settings::General.mailchimp_community_moderators_id.present? && user.trusted?
 
-      gibbon.lists(Settings::General.mailchimp_sustaining_members_id).members(target_md5_email).update(
-        body: {
-          status: "unsubscribed"
-        },
-      )
+      permanent_delete_from_mailchimp(Settings: General.mailchimp_community_moderators_id)
     end
 
-    def unsub_community_mod
-      return unless Settings::General.mailchimp_community_moderators_id.present? && user.trusted
-
-      gibbon.lists(Settings::General.mailchimp_community_moderators_id).members(target_md5_email).update(
-        body: {
-          status: "unsubscribed"
-        },
-      )
-    end
-
-    def unsub_tag_mod
+    def remove_tag_mod
       return unless Settings::General.mailchimp_tag_moderators_id.present? && user.tag_moderator?
 
-      gibbon.lists(Settings::General.mailchimp_tag_moderators_id).members(target_md5_email).update(
-        body: {
-          status: "unsubscribed"
-        },
-      )
+      permanent_delete_from_mailchimp(Settings::General.mailchimp_tag_moderators_id)
     end
 
-    def unsubscribe_all_newsletters
+    def remove_from_mailchimp
       success = false
       begin
-        gibbon.lists(Settings::General.mailchimp_newsletter_id).members(target_md5_email).update(
-          body: {
-            status: "unsubscribed"
-          },
-        )
-        unsub_tag_mod
-        unsub_sustaining_member
-        unsub_community_mod
+        permanent_delete_from_mailchimp(Settings::General.mailchimp_newsletter_id)
+        remove_tag_mod
+        remove_community_mod
         success = true
       rescue Gibbon::MailChimpError => e
         report_error(e)
@@ -171,13 +148,6 @@ module Mailchimp
     end
 
     private
-
-    def a_sustaining_member?
-      # Reasoning for including => saved_changes["monthly_dues"]
-      # Is that mailchimp should be updated if a user decides to
-      # unsubscribes
-      user.monthly_dues.positive? || saved_changes["monthly_dues"]
-    end
 
     def md5_email(email)
       Digest::MD5.hexdigest(email.downcase)
@@ -194,7 +164,15 @@ module Mailchimp
       md5_email(email)
     end
 
-    def previously_subcribed?(error)
+    def permanent_delete_from_mailchimp(list_id)
+      gibbon.lists(list_id).members(target_md5_email).actions.delete_permanent.create
+    rescue Gibbon::MailChimpError => e
+      return if e.status_code == 404
+
+      report_error(e)
+    end
+
+    def previously_subscribed?(error)
       error.title.include?("Member In Compliance State")
     end
   end

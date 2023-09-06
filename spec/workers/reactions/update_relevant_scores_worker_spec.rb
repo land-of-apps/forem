@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe Reactions::UpdateRelevantScoresWorker, type: :worker, throttled_call: true do
+RSpec.describe Reactions::UpdateRelevantScoresWorker, throttled_call: true, type: :worker do
   describe "#perform" do
     let(:article) { create(:article) }
     let(:reaction) { create(:reaction, reactable: article) }
@@ -31,6 +31,13 @@ RSpec.describe Reactions::UpdateRelevantScoresWorker, type: :worker, throttled_c
       sidekiq_assert_enqueued_with(job: Articles::ScoreCalcWorker) do
         worker.perform(reaction.id)
       end
+    end
+
+    it "recalculates score if reactable is User" do
+      user = create(:user)
+      reaction.update_columns(category: "vomit", reactable_id: user.id, reactable_type: "User", points: -50)
+      worker.perform(reaction.id)
+      expect(user.reload.score).to be < -1
     end
 
     it "updates the reactable Comment" do

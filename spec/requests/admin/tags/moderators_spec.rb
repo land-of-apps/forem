@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe "/admin/content_manager/tags/:id/moderator", type: :request do
+RSpec.describe "/admin/content_manager/tags/:id/moderator" do
   let(:super_admin) { create(:user, :super_admin) }
   let(:user)        { create(:user) }
   let(:tag)         { create(:tag) }
@@ -10,8 +10,9 @@ RSpec.describe "/admin/content_manager/tags/:id/moderator", type: :request do
 
     it "adds the given user as trusted and as a tag moderator" do
       post admin_tag_moderator_path(tag.id), params: { tag_id: tag.id, tag: { user_id: user.id } }
+
       expect(user.tag_moderator?).to be true
-      expect(user.trusted).to be true
+      expect(user.trusted?).to be true
     end
   end
 
@@ -29,7 +30,7 @@ RSpec.describe "/admin/content_manager/tags/:id/moderator", type: :request do
 
     it "does not remove the trusted role from the user" do
       delete admin_tag_moderator_path(tag.id), params: { tag_id: tag.id, tag: { user_id: user.id } }
-      expect(user.trusted).to be true
+      expect(user.trusted?).to be true
     end
   end
 end

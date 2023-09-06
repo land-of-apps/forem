@@ -1,7 +1,59 @@
+import { isInViewport } from '@utilities/viewport';
+import { debounceAction } from '@utilities/debounceAction';
+
+/**
+ * Helper function designed to be used on scroll to detect when dropdowns should switch from dropping downwards/upwards.
+ * The action is debounced since scroll events are usually fired several at a time.
+ *
+ * @returns {Function} a debounced function that handles the repositioning of dropdowns
+ * @example
+ *
+ * document.addEventListener('scroll', getDropdownRepositionListener());
+ */
+export const getDropdownRepositionListener = () =>
+  debounceAction(handleDropdownRepositions);
+
+/**
+ * Checks for all dropdowns on the page which have the attribute 'data-repositioning-dropdown', signalling
+ * they should dynamically change between dropping downwards or upwards, depending on viewport position.
+ *
+ * Any dropdowns not fully in view when dropping down will be switched to dropping upwards.
+ */
+const handleDropdownRepositions = () => {
+  // Select all of the dropdowns which should reposition
+  const allRepositioningDropdowns = document.querySelectorAll(
+    '[data-repositioning-dropdown]',
+  );
+
+  for (const element of allRepositioningDropdowns) {
+    // Default to dropping downwards
+    element.classList.remove('reverse');
+
+    const isDropdownCurrentlyOpen = element.style.display === 'block';
+
+    if (!isDropdownCurrentlyOpen) {
+      // We can't determine position on an element with display:none, so we "show" the dropdown with 0 opacity very temporarily
+      element.style.opacity = 0;
+      element.style.display = 'block';
+    }
+
+    if (!isInViewport({ element })) {
+      // If the element isn't fully visible when dropping down, reverse the direction
+      element.classList.add('reverse');
+    }
+
+    if (!isDropdownCurrentlyOpen) {
+      // Revert the temporary changes to determine position
+      element.style.removeProperty('display');
+      element.style.removeProperty('opacity');
+    }
+  }
+};
+
 /**
  * Helper query string to identify interactive/focusable HTML elements
  */
-const INTERACTIVE_ELEMENTS_QUERY =
+export const INTERACTIVE_ELEMENTS_QUERY =
   'button, [href], input:not([type="hidden"]), select, textarea, [tabindex="0"]';
 
 /**
@@ -11,7 +63,7 @@ const INTERACTIVE_ELEMENTS_QUERY =
  * @param {string} args.triggerElementId The id of the button which activates the dropdown
  * @param {string} args.dropdownContent The id of the dropdown content element
  */
-const openDropdown = ({ triggerElementId, dropdownContentId }) => {
+export const openDropdown = ({ triggerElementId, dropdownContentId }) => {
   const dropdownContent = document.getElementById(dropdownContentId);
   const triggerElement = document.getElementById(triggerElementId);
 
@@ -32,7 +84,11 @@ const openDropdown = ({ triggerElementId, dropdownContentId }) => {
  * @param {string} args.dropdownContent The id of the dropdown content element
  * @param {Function} args.onClose Optional function for any side-effects which should occur on dropdown close
  */
-const closeDropdown = ({ triggerElementId, dropdownContentId, onClose }) => {
+export const closeDropdown = ({
+  triggerElementId,
+  dropdownContentId,
+  onClose,
+}) => {
   const dropdownContent = document.getElementById(dropdownContentId);
 
   if (!dropdownContent) {
@@ -113,7 +169,10 @@ export const initializeDropdown = ({
 
   // Close the dropdown if user has clicked outside
   const clickOutsideListener = ({ target }) => {
+    // Get fresh handle every time, resulting in more streamlined functionality for cypress
+    const triggerButton = document.getElementById(triggerElementId);
     if (
+      triggerButton &&
       target !== triggerButton &&
       !dropdownContent.contains(target) &&
       !triggerButton.contains(target)
@@ -138,7 +197,7 @@ export const initializeDropdown = ({
     document.removeEventListener('click', clickOutsideListener);
   };
 
-  // Add the main trigger button toggle funcationality
+  // Add the main trigger button toggle functionality
   triggerButton.addEventListener('click', () => {
     if (
       document

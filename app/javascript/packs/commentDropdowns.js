@@ -1,13 +1,16 @@
 import { addSnackbarItem } from '../Snackbar';
-import { initializeDropdown } from '@utilities/dropdownUtils';
-
-/* global Runtime initializeAllFollowButts  */
+import {
+  initializeDropdown,
+  getDropdownRepositionListener,
+} from '@utilities/dropdownUtils';
+import { locale } from '@utilities/locale';
+import { copyToClipboard } from '@utilities/runtime';
 
 const handleCopyPermalink = (closeDropdown) => {
   return (event) => {
     event.preventDefault();
     const permalink = event.target.href;
-    Runtime.copyToClipboard(permalink).then(() => {
+    copyToClipboard(permalink).then(() => {
       addSnackbarItem({ message: 'Copied to clipboard' });
     });
     closeDropdown();
@@ -17,7 +20,7 @@ const handleCopyPermalink = (closeDropdown) => {
 const initializeArticlePageDropdowns = () => {
   // Gather all dropdown triggers for comment options and profile previews
   const dropdownTriggers = document.querySelectorAll(
-    'button[id^=comment-dropdown-trigger], button[id^=comment-profile-preview-trigger-]',
+    'button[id^=comment-dropdown-trigger], button[id^=comment-profile-preview-trigger-], button[id^=toggle-comments-sort-dropdown]',
   );
 
   for (const dropdownTrigger of dropdownTriggers) {
@@ -26,6 +29,10 @@ const initializeArticlePageDropdowns = () => {
       continue;
     }
 
+    const isProfilePreview = dropdownTrigger.id.includes(
+      'comment-profile-preview-trigger',
+    );
+
     const dropdownContentId = dropdownTrigger.getAttribute('aria-controls');
     const dropdownElement = document.getElementById(dropdownContentId);
 
@@ -33,6 +40,16 @@ const initializeArticlePageDropdowns = () => {
       const { closeDropdown } = initializeDropdown({
         triggerElementId: dropdownTrigger.id,
         dropdownContentId,
+        onOpen: () => {
+          if (isProfilePreview) {
+            dropdownElement?.classList.add('showing');
+          }
+        },
+        onClose: () => {
+          if (isProfilePreview) {
+            dropdownElement?.classList.remove('showing');
+          }
+        },
       });
 
       // Add actual link location (SEO doesn't like these "useless" links, so adding in here instead of in HTML)
@@ -40,7 +57,11 @@ const initializeArticlePageDropdowns = () => {
         '.report-abuse-link-wrapper',
       );
       if (reportAbuseWrapper) {
-        reportAbuseWrapper.innerHTML = `<a href="${reportAbuseWrapper.dataset.path}" class="crayons-link crayons-link--block">Report abuse</a>`;
+        reportAbuseWrapper.innerHTML = `<a href="${
+          reportAbuseWrapper.dataset.path
+        }" class="crayons-link crayons-link--block">${locale(
+          'core.report_abuse',
+        )}</a>`;
       }
 
       // Initialize the "Copy link" functionality
@@ -59,21 +80,22 @@ const initializeArticlePageDropdowns = () => {
  * @param {HTMLElement} placeholderElement The <span> placeholder element to be replaced by the preview dropdown
  */
 const fetchMissingProfilePreviewCard = async (placeholderElement) => {
+  const {
+    jsCommentUserId: commentUserId,
+    jsDropdownContentId: dropdownContentId,
+  } = placeholderElement.dataset;
   const response = await window.fetch(
-    `/profile_preview_card/show?user_id=${placeholderElement.dataset.jsCommentUserId}&preview_card_id=${placeholderElement.dataset.jsDropdownContentId}`,
+    `/profile_preview_cards/${commentUserId}`,
   );
   const htmlContent = await response.text();
 
   const generatedElement = document.createElement('div');
   generatedElement.innerHTML = htmlContent;
 
-  placeholderElement.parentNode.replaceChild(
-    generatedElement.firstElementChild,
-    placeholderElement,
-  );
+  const { firstElementChild: previewCard } = generatedElement;
+  previewCard.id = dropdownContentId;
 
-  // Make sure the button inside the dropdown is initialized
-  initializeAllFollowButts();
+  placeholderElement.parentNode.replaceChild(previewCard, placeholderElement);
 };
 
 /**
@@ -107,12 +129,18 @@ observer.observe(document.getElementById('comment-trees-container'), {
   subtree: true,
 });
 
+// Preview card dropdowns reposition on scroll
+const dropdownRepositionListener = getDropdownRepositionListener();
+document.addEventListener('scroll', dropdownRepositionListener);
+
 InstantClick.on('change', () => {
   observer.disconnect();
+  document.removeEventListener('scroll', dropdownRepositionListener);
 });
 
 window.addEventListener('beforeunload', () => {
   observer.disconnect();
+  document.removeEventListener('scroll', dropdownRepositionListener);
 });
 
 initializeArticlePageDropdowns();

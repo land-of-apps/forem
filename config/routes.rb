@@ -1,10 +1,6 @@
 # rubocop:disable Metrics/BlockLength
 
 Rails.application.routes.draw do
-  use_doorkeeper do
-    controllers tokens: "oauth/tokens"
-  end
-
   # Devise does not support scoping omniauth callbacks under a dynamic segment
   # so this lives outside our i18n scope.
   devise_for :users, controllers: {
@@ -28,19 +24,14 @@ Rails.application.routes.draw do
   # begin supporting i18n.
   scope "(/locale/:locale)", defaults: { locale: nil } do
     get "/locale/:locale", to: "stories#index"
-    require "sidekiq/web"
-    require "sidekiq_unique_jobs/web"
-    require "sidekiq/cron/web"
-
-    authenticated :user, ->(user) { user.tech_admin? } do
-      Sidekiq::Web.class_eval do
-        use Rack::Protection, permitted_origins: [URL.url] # resolve Rack Protection HttpOrigin
-      end
-      mount Sidekiq::Web => "/sidekiq"
-      mount FieldTest::Engine, at: "abtests"
-    end
 
     draw :admin
+
+    # The lambda (e.g. `->`) allows for dynamic checking.  In other words we check with each
+    # request.
+    constraints(->(_req) { Listing.feature_enabled? }) do
+      draw :listing
+    end
 
     namespace :stories, defaults: { format: "json" } do
       resource :feed, only: [:show] do
@@ -51,57 +42,38 @@ Rails.application.routes.draw do
     end
 
     namespace :api, defaults: { format: "json" } do
-      scope module: :v0,
-            constraints: ApiConstraints.new(version: 0, default: true) do
-        resources :articles, only: %i[index show create update] do
-          collection do
-            get "me(/:status)", to: "articles#me", as: :me, constraints: { status: /published|unpublished|all/ }
-            get "/:username/:slug", to: "articles#show_by_slug", as: :slug
-            get "/latest", to: "articles#index", defaults: { sort: "desc" }
-          end
-        end
-        resources :comments, only: %i[index show]
-        resources :videos, only: [:index]
-        resources :podcast_episodes, only: [:index]
-        resources :users, only: %i[show] do
-          collection do
-            get :me
-          end
-        end
-        resources :tags, only: [:index]
-        resources :follows, only: [:create] do
-          collection do
-            get :tags
-          end
-        end
-        namespace :followers do
-          get :users
-          get :organizations
-        end
-        resources :readinglist, only: [:index]
-        resources :webhooks, only: %i[index create show destroy]
+      scope module: :v1, constraints: ApiConstraints.new(version: 1, default: false) do
+        # V1 only endpoints
+        put "/users/:id/suspend", to: "users#suspend", as: :user_suspend
+        put "/articles/:id/unpublish", to: "articles#unpublish", as: :article_unpublish
+        put "/users/:id/unpublish", to: "users#unpublish", as: :user_unpublish
 
-        resources :listings, only: %i[index show create update]
-        get "/listings/category/:category", to: "listings#index", as: :listings_category
-        get "/analytics/totals", to: "analytics#totals"
-        get "/analytics/historical", to: "analytics#historical"
-        get "/analytics/past_day", to: "analytics#past_day"
-        get "/analytics/referrers", to: "analytics#referrers"
+        post "/reactions", to: "reactions#create"
+        post "/reactions/toggle", to: "reactions#toggle"
 
-        resources :health_checks, only: [] do
-          collection do
-            get :app
-            get :database
-            get :cache
-          end
+        resources :billboards, only: %i[index show create update] do
+          put "unpublish", on: :member
+        end
+        # temporary keeping both routes while transitioning (renaming) display_ads => billboards
+        resources :display_ads, only: %i[index show create update], controller: :billboards do
+          put "unpublish", on: :member
         end
 
-        resources :profile_images, only: %i[show], param: :username
-        resources :organizations, only: [:show], param: :username do
-          resources :users, only: [:index], to: "organizations#users"
-          resources :listings, only: [:index], to: "organizations#listings"
-          resources :articles, only: [:index], to: "organizations#articles"
+        resources :segments, controller: "audience_segments", only: %i[index show create destroy] do
+          get "users", on: :member
+          put "add_users", on: :member
+          put "remove_users", on: :member
         end
+
+        resources :pages, only: %i[index show create update destroy]
+
+        resources :organizations, only: %i[index create update destroy]
+
+        draw :api
+      end
+
+      scope module: :v0, constraints: ApiConstraints.new(version: 0, default: true) do
+        draw :api
       end
     end
 
@@ -116,10 +88,9 @@ Rails.application.routes.draw do
     end
 
     resources :messages, only: [:create]
-    resources :chat_channels, only: %i[index show create update]
-    resources :chat_channel_memberships, only: %i[index create edit update destroy]
     resources :articles, only: %i[update create destroy] do
       patch "/admin_unpublish", to: "articles#admin_unpublish"
+      patch "/admin_featured_toggle", to: "articles#admin_featured_toggle"
     end
     resources :article_mutes, only: %i[update]
     resources :comments, only: %i[create update destroy] do
@@ -136,12 +107,15 @@ Rails.application.routes.draw do
         resources :devices, only: %i[create destroy]
       end
     end
+    namespace :users do
+      resource :settings, only: %i[update]
+      resource :notification_settings, only: %i[update]
+    end
     resources :users, only: %i[update]
     resources :reactions, only: %i[index create]
     resources :response_templates, only: %i[index create edit update destroy]
     resources :feedback_messages, only: %i[index create]
     resources :organizations, only: %i[update create destroy]
-    resources :followed_articles, only: [:index]
     resources :follows, only: %i[show create] do
       collection do
         get "/bulk_show", to: "follows#bulk_show"
@@ -152,7 +126,8 @@ Rails.application.routes.draw do
     resources :notifications, only: [:index]
     resources :tags, only: [:index] do
       collection do
-        get "/onboarding", to: "tags#onboarding"
+        get "/suggest", to: "tags#suggest", defaults: { format: :json }
+        get "/bulk", to: "tags#bulk", defaults: { format: :json }
       end
     end
     resources :stripe_active_cards, only: %i[create update destroy]
@@ -161,16 +136,12 @@ Rails.application.routes.draw do
         post "/update_or_create", to: "github_repos#update_or_create"
       end
     end
-    resources :events, only: %i[index show]
     resources :videos, only: %i[index create new]
     resources :video_states, only: [:create]
     resources :twilio_tokens, only: [:show]
-    resources :html_variant_trials, only: [:create]
-    resources :html_variant_successes, only: [:create]
     resources :tag_adjustments, only: %i[create destroy]
     resources :rating_votes, only: [:create]
     resources :page_views, only: %i[create update]
-    resources :listings, only: %i[index new create edit update destroy dashboard]
     resources :credits, only: %i[index new create] do
       get "purchase", on: :collection, to: "credits#new"
     end
@@ -178,19 +149,21 @@ Rails.application.routes.draw do
     resources :poll_votes, only: %i[show create]
     resources :poll_skips, only: [:create]
     resources :profile_pins, only: %i[create update]
-    resources :display_ad_events, only: [:create]
+    # temporary keeping both routes while transitioning (renaming) display_ads => billboards
+    resources :display_ad_events, only: [:create], controller: :billboard_events
+    resources :billboard_events, only: [:create]
     resources :badges, only: [:index]
     resources :user_blocks, param: :blocked_id, only: %i[show create destroy]
     resources :podcasts, only: %i[new create]
     resources :article_approvals, only: %i[create]
-    resources :video_chats, only: %i[show]
     resources :sidebars, only: %i[show]
-    resources :profile_preview_card, only: %i[show]
+    resources :profile_preview_cards, only: %i[show]
     resources :user_subscriptions, only: %i[create] do
       collection do
         get "/subscribed", action: "subscribed"
       end
     end
+
     namespace :followings, defaults: { format: :json } do
       get :users
       get :tags
@@ -198,7 +171,15 @@ Rails.application.routes.draw do
       get :podcasts
     end
 
-    resource :onboarding, only: :show
+    resource :onboarding, only: %i[show update] do
+      member do
+        patch :checkbox, defaults: { format: :json }
+        patch :notifications, defaults: { format: :json }
+        get :tags, defaults: { format: :json }
+        get :users_and_organizations, defaults: { format: :json }
+      end
+    end
+
     resources :profiles, only: %i[update]
     resources :profile_field_groups, only: %i[index], defaults: { format: :json }
 
@@ -208,66 +189,32 @@ Rails.application.routes.draw do
 
     get "/verify_email_ownership", to: "email_authorizations#verify", as: :verify_email_authorizations
     get "/search/tags", to: "search#tags"
-    get "/search/chat_channels", to: "search#chat_channels"
-    get "/search/listings", to: "search#listings"
     get "/search/usernames", to: "search#usernames"
     get "/search/feed_content", to: "search#feed_content"
     get "/search/reactions", to: "search#reactions"
-    get "/chat_channel_memberships/find_by_chat_channel_id", to: "chat_channel_memberships#find_by_chat_channel_id"
-    get "/listings/dashboard", to: "listings#dashboard"
-    get "/listings/:category", to: "listings#index", as: :listing_category
-    get "/listings/:category/:slug", to: "listings#index", as: :listing_slug
-    get "/listings/:category/:slug/:view", to: "listings#index",
-                                           constraints: { view: /moderate/ }
-    get "/listings/:category/:slug/delete_confirm", to: "listings#delete_confirm"
-    delete "/listings/:category/:slug", to: "listings#destroy"
-    get "/notifications/:filter", to: "notifications#index"
-    get "/notifications/:filter/:org_id", to: "notifications#index"
+    get "/notifications/:filter", to: "notifications#index", as: :notifications_filter
+    get "/notifications/:filter/:org_id", to: "notifications#index", as: :notifications_filter_org
     get "/notification_subscriptions/:notifiable_type/:notifiable_id", to: "notification_subscriptions#show"
     post "/notification_subscriptions/:notifiable_type/:notifiable_id", to: "notification_subscriptions#upsert"
-    patch "/onboarding_update", to: "users#onboarding_update"
-    patch "/onboarding_checkbox_update", to: "users#onboarding_checkbox_update"
     get "email_subscriptions/unsubscribe"
-    post "/chat_channels/:id/moderate", to: "chat_channels#moderate"
-    post "/chat_channels/:id/open", to: "chat_channels#open"
-    get "/connect", to: "chat_channels#index"
-    get "/connect/:slug", to: "chat_channels#index"
-    get "/chat_channels/:id/channel_info", to: "chat_channels#channel_info", as: :chat_channel_info
-    post "/chat_channels/create_chat", to: "chat_channels#create_chat"
-    post "/chat_channels/block_chat", to: "chat_channels#block_chat"
-    post "/chat_channel_memberships/remove_membership", to: "chat_channel_memberships#remove_membership"
-    post "/chat_channel_memberships/add_membership", to: "chat_channel_memberships#add_membership"
-    post "/join_chat_channel", to: "chat_channel_memberships#join_channel"
-    delete "/messages/:id", to: "messages#destroy"
-    patch "/messages/:id", to: "messages#update"
+
     get "/internal", to: redirect("/admin")
     get "/internal/:path", to: redirect("/admin/%{path}")
 
-    post "/pusher/auth", to: "pusher#auth"
-
-    # Chat channel
-    patch "/chat_channels/update_channel/:id", to: "chat_channels#update_channel"
-    post "/create_channel", to: "chat_channels#create_channel"
-
-    # Chat Channel Membership json response
-    get "/chat_channel_memberships/chat_channel_info/:id", to: "chat_channel_memberships#chat_channel_info"
-    post "/chat_channel_memberships/create_membership_request", to: "chat_channel_memberships#create_membership_request"
-    patch "/chat_channel_memberships/leave_membership/:id", to: "chat_channel_memberships#leave_membership"
-    patch "/chat_channel_memberships/update_membership/:id", to: "chat_channel_memberships#update_membership"
-    get "/channel_request_info/", to: "chat_channel_memberships#request_details"
-    patch "/chat_channel_memberships/update_membership_role/:id", to: "chat_channel_memberships#update_membership_role"
-    get "/join_channel_invitation/:channel_slug", to: "chat_channel_memberships#join_channel_invitation"
-    post "/joining_invitation_response", to: "chat_channel_memberships#joining_invitation_response"
-
     get "/social_previews/article/:id", to: "social_previews#article", as: :article_social_preview
-    get "/social_previews/user/:id", to: "social_previews#user", as: :user_social_preview
-    get "/social_previews/organization/:id", to: "social_previews#organization", as: :organization_social_preview
-    get "/social_previews/tag/:id", to: "social_previews#tag", as: :tag_social_preview
-    get "/social_previews/listing/:id", to: "social_previews#listing", as: :listing_social_preview
-    get "/social_previews/comment/:id", to: "social_previews#comment", as: :comment_social_preview
 
-    get "/async_info/base_data", controller: "async_info#base_data", defaults: { format: :json }
-    get "/async_info/shell_version", controller: "async_info#shell_version", defaults: { format: :json }
+    get "/async_info/base_data", to: "async_info#base_data", defaults: { format: :json }
+    get "/async_info/navigation_links", to: "async_info#navigation_links"
+
+    # Billboards
+    scope "/:username/:slug" do
+      get "/billboards/:placement_area", to: "billboards#show", as: :article_billboard
+      # temporary keeping both routes while transitioning (renaming) display_ads => billboards
+      get "/display_ads/:placement_area", to: "billboards#show"
+    end
+    get "/billboards/:placement_area", to: "billboards#show", as: :billboard
+    # temporary keeping both routes while transitioning (renaming) display_ads => billboards
+    get "/display_ads/:placement_area", to: "billboards#show"
 
     # Settings
     post "users/join_org", to: "users#join_org"
@@ -289,7 +236,7 @@ Rails.application.routes.draw do
 
     # You can have the root of your site routed with "root
     get "/robots.:format", to: "pages#robots"
-    get "/api", to: redirect("https://docs.forem.com/api")
+    get "/api", to: redirect("https://developers.forem.com/api")
     get "/privacy", to: "pages#privacy"
     get "/terms", to: "pages#terms"
     get "/contact", to: "pages#contact"
@@ -298,19 +245,17 @@ Rails.application.routes.draw do
     get "/welcome", to: "pages#welcome"
     get "/challenge", to: "pages#challenge"
     get "/checkin", to: "pages#checkin"
-    get "/badge", to: "pages#badge", as: :pages_badge
     get "/💸", to: redirect("t/hiring")
     get "/survey", to: redirect("https://dev.to/ben/final-thoughts-on-the-state-of-the-web-survey-44nn")
-    get "/events", to: "events#index"
-    get "/workshops", to: redirect("events")
-    get "/sponsors", to: "pages#sponsors"
-    get "/search", to: "stories#search"
+    get "/search", to: "stories/articles_search#index"
+    get "/:slug/members", to: "organizations#members", as: :organization_members
     post "articles/preview", to: "articles#preview"
     post "comments/preview", to: "comments#preview"
+    post "comments/subscribe", to: "notification_subscriptions#create"
+    post "subscription/unsubscribe", to: "notification_subscriptions#destroy"
 
     # These routes are required by links in the sites and will most likely to be replaced by a db page
     get "/about", to: "pages#about"
-    get "/about-listings", to: "pages#about_listings"
     get "/security", to: "pages#bounty"
     get "/community-moderation", to: "pages#community_moderation"
     get "/faq", to: "pages#faq"
@@ -349,13 +294,14 @@ Rails.application.routes.draw do
     get "dashboard/following_users", to: "dashboards#following_users"
     get "dashboard/following_organizations", to: "dashboards#following_organizations"
     get "dashboard/following_podcasts", to: "dashboards#following_podcasts"
+    get "dashboard/hidden_tags", to: "dashboards#hidden_tags"
     get "/dashboard/subscriptions", to: "dashboards#subscriptions"
     get "/dashboard/:which", to: "dashboards#followers", constraints: { which: /user_followers/ }
     get "/dashboard/:which/:org_id", to: "dashboards#show",
                                      constraints: {
                                        which: /organization/
                                      }
-    get "/dashboard/:username", to: "dashboards#show"
+    get "/dashboard/:username", to: "dashboards#show", as: :dashboard_show_user
 
     # for testing rails mailers
     unless Rails.env.production?
@@ -398,8 +344,6 @@ Rails.application.routes.draw do
     get "/t/:tag/admin", to: "tags#admin"
     patch "/tag/:id", to: "tags#update"
 
-    get "/badge/:slug", to: "badges#show", as: :badge
-
     get "/top/:timeframe", to: "stories#index"
 
     get "/:timeframe", to: "stories#index", constraints: { timeframe: /latest/ }
@@ -421,7 +365,7 @@ Rails.application.routes.draw do
     get "/:username/comment/:id_code/settings", to: "comments#settings"
 
     get "/:username/:slug/:view", to: "stories#show",
-                                  constraints: { view: /moderate/ }
+                                  constraints: { view: /moderate|admin/ }
     get "/:username/:slug/mod", to: "moderations#article"
     get "/:username/:slug/actions_panel", to: "moderations#actions_panel"
     get "/:username/:slug/manage", to: "articles#manage", as: :article_manage

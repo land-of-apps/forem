@@ -19,7 +19,7 @@ describe('ProfileForm', () => {
         communityConfig={{
           communityName: 'Community Name',
           communityLogo: '/x.png',
-          communityBackground: '/y.jpg',
+          communityBackgroundColor: '#FFF000',
           communityDescription: 'Some community description',
         }}
         previousLocation={null}
@@ -102,11 +102,71 @@ describe('ProfileForm', () => {
     );
   });
 
+  it('should render TextInput with placeholder text', () => {
+    const { getByPlaceholderText } = render(
+      <ProfileForm
+        prev={jest.fn()}
+        next={jest.fn()}
+        slidesCount={3}
+        currentSlideIndex={1}
+        communityConfig={{ communityName: 'Community' }}
+      />,
+    );
+
+    const usernameInput = getByPlaceholderText('johndoe');
+    expect(usernameInput).toBeInTheDocument();
+  });
+
+  it('should render TextArea with placeholder text', () => {
+    const { getByPlaceholderText } = render(
+      <ProfileForm
+        prev={jest.fn()}
+        next={jest.fn()}
+        slidesCount={3}
+        currentSlideIndex={1}
+        communityConfig={{ communityName: 'Community' }}
+      />,
+    );
+
+    const bioTextArea = getByPlaceholderText('Tell us a little about yourself');
+    expect(bioTextArea).toBeInTheDocument();
+  });
+
+  it('should render TextInput with input type "text"', () => {
+    const { getByPlaceholderText } = render(
+      <ProfileForm
+        prev={jest.fn()}
+        next={jest.fn()}
+        slidesCount={3}
+        currentSlideIndex={1}
+        communityConfig={{ communityName: 'Community' }}
+      />,
+    );
+
+    const usernameInput = getByPlaceholderText('johndoe');
+    expect(usernameInput.type).toBe('text');
+  });
+
+  it('should render TextArea with description text', () => {
+    const { getByText } = render(
+      <ProfileForm
+        prev={jest.fn()}
+        next={jest.fn()}
+        slidesCount={3}
+        currentSlideIndex={1}
+        communityConfig={{ communityName: 'Community' }}
+      />,
+    );
+
+    const bioDescription = getByText('Bio');
+    expect(bioDescription).toBeInTheDocument();
+  });
+
   it('should show the correct name and username', () => {
     const { queryByText } = renderProfileForm();
 
     expect(queryByText('username')).toBeDefined();
-    expect(queryByText('firstname lastname')).toBeDefined();
+    expect(queryByText('firstname lastname')).toExist();
   });
 
   it('should show the correct profile picture', () => {
@@ -146,13 +206,13 @@ describe('ProfileForm', () => {
   it('should render a stepper', () => {
     const { queryByTestId } = renderProfileForm();
 
-    expect(queryByTestId('stepper')).toBeDefined();
+    expect(queryByTestId('stepper')).toExist();
   });
 
   it('should show the back button', () => {
     const { queryByTestId } = renderProfileForm();
 
-    expect(queryByTestId('back-button')).toBeDefined();
+    expect(queryByTestId('back-button')).toExist();
   });
 
   it('should not be skippable', async () => {

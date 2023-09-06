@@ -1,12 +1,11 @@
 require "rails_helper"
 
-RSpec.describe "UserShow", type: :request do
+RSpec.describe "UserShow" do
   let!(:profile) do
     create(
       :profile,
       :with_DEV_info,
       user: create(:user, :without_profile),
-      display_email_on_profile: true,
     )
   end
   let(:user) { profile.user }
@@ -19,6 +18,7 @@ RSpec.describe "UserShow", type: :request do
 
     # rubocop:disable RSpec/ExampleLength
     it "renders the proper JSON-LD for a user" do
+      user.setting.update(display_email_on_profile: true)
       get user.path
       text = Nokogiri::HTML(response.body).at('script[type="application/ld+json"]').text
       response_json = JSON.parse(text)
@@ -35,19 +35,10 @@ RSpec.describe "UserShow", type: :request do
           "https://github.com/#{user.github_username}",
           "http://example.com",
         ],
-        "image" => Images::Profile.call(user.profile_image_url, length: 320),
+        "image" => user.profile_image_url_for(length: 320),
         "name" => user.name,
         "email" => user.email,
-        "jobTitle" => user.employment_title,
-        "description" => user.summary,
-        "worksFor" => [
-          {
-            "@type" => "Organization",
-            "name" => user.employer_name,
-            "url" => user.employer_url
-          },
-        ],
-        "alumniOf" => user.education,
+        "description" => user.tag_line,
       )
     end
     # rubocop:enable RSpec/ExampleLength

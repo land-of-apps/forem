@@ -1,5 +1,7 @@
 <% accent_color = Color::CompareHex.new([user_colors(@article.user)[:bg], user_colors(@article.user)[:text]]).biggest %>
-<% dark_color = Color::CompareHex.new([user_colors(@article.user)[:bg], user_colors(@article.user)[:text]]).brightness(0.8) %>
+<% dark_color = Color::CompareHex.new([user_colors(@article.user)[:bg], user_colors(@article.user)[:text]]).brightness(0.8). %>
+<% then { |color| Color::Accessibility.new(color).low_contrast? ? "black" : color } %>
+
 <style>
   body {
     background: <%= accent_color %>;
@@ -116,18 +118,14 @@
       </style>
       <% font_size *= 0.9 %>
       <div class="preview-info-header">
-        <% if @article.comments_count > 0 %>
-          #discuss <img src="<%= asset_path "comments-bubble.png" %>" /><%= @article.comments_count %>
-        <% else %>
-          New Discussion!
-        <% end %>
+        <%= t("views.articles.preview_discuss_html", image: asset_path("comments-bubble.png"), count: @article.comments_count) %>
       </div>
     <% end %>
     <div class="title-area">
       <h1 style="font-size:<%= font_size %>vw;"><%= @article.title %></h1>
     </div>
     <div class="preview-user">
-      <img src="<%= Images::Profile.call(@article.user.profile_image_url, length: 90) %>" />
+      <img src="<%= @article.user.profile_image_url_for(length: 90) %>" />
       <%= truncate @article.user.name, length: 28 %>・<%= @article.readable_publish_date %>
     </div>
     <div class="badge-images">

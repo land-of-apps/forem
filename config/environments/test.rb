@@ -7,9 +7,12 @@ require "active_support/core_ext/integer/time"
 
 # rubocop:disable Metrics/BlockLength
 Rails.application.configure do
+  config.app_domain = ENV.fetch("APP_DOMAIN", "test.host")
+
   # Settings specified here will take precedence over those in config/application.rb.
 
-  config.cache_classes = true
+  # https://guides.rubyonrails.org/configuring.html#config-cache-classes
+  config.cache_classes = false
 
   # See https://github.com/rails/rails/issues/40613#issuecomment-727283155
   config.action_view.cache_template_loading = true
@@ -44,7 +47,7 @@ Rails.application.configure do
   config.action_mailer.delivery_method = :test
 
   # Additional setting to make test work. This is possibly useless and can be deleted.
-  config.action_mailer.default_url_options = { host: "test.host" }
+  config.action_mailer.default_url_options = { host: config.app_domain }
 
   # Randomize the order test cases are executed.
   config.active_support.test_order = :random
@@ -58,13 +61,11 @@ Rails.application.configure do
   # Tell Active Support which deprecation messages to disallow.
   config.active_support.disallowed_deprecation_warnings = []
 
-  config.active_job.queue_adapter = :test
-
   # Debug is the default log_level, but can be changed per environment.
   config.log_level = :debug
 
   # Raises error for missing translations.
-  # config.i18n.raise_on_missing_translations = true
+  config.i18n.raise_on_missing_translations = true
 
   # Annotate rendered view with file names
   # config.action_view.annotate_rendered_view_with_filenames = true
@@ -72,18 +73,24 @@ Rails.application.configure do
   # enable Bullet in testing mode only if requested
   config.after_initialize do
     Bullet.enable = true
-    Bullet.raise = true
+    Bullet.raise = false
 
-    Bullet.add_whitelist(type: :unused_eager_loading, class_name: "ApiSecret", association: :user)
+    Bullet.add_safelist(type: :unused_eager_loading, class_name: "ApiSecret", association: :user)
     # acts-as-taggable-on has super weird eager loading problems: <https://github.com/mbleigh/acts-as-taggable-on/issues/91>
-    Bullet.add_whitelist(type: :n_plus_one_query, class_name: "ActsAsTaggableOn::Tagging", association: :tag)
-    # Supress incorrect warnings from Bullet due to included columns: https://github.com/flyerhzm/bullet/issues/147
-    Bullet.add_whitelist(type: :unused_eager_loading, class_name: "Article", association: :top_comments)
-    Bullet.add_whitelist(type: :unused_eager_loading, class_name: "Comment", association: :user)
-    # NOTE: @citizen428 Temporarily ignoring this while working out user - profile relationship
-    Bullet.add_whitelist(type: :n_plus_one_query, class_name: "User", association: :profile)
+    Bullet.add_safelist(type: :n_plus_one_query, class_name: "ActsAsTaggableOn::Tagging", association: :tag)
+    # Suppress incorrect warnings from Bullet due to included columns: https://github.com/flyerhzm/bullet/issues/147
+    Bullet.add_safelist(type: :unused_eager_loading, class_name: "Article", association: :top_comments)
+    Bullet.add_safelist(type: :unused_eager_loading, class_name: "Article", association: :collection)
+    Bullet.add_safelist(type: :unused_eager_loading, class_name: "Comment", association: :user)
+    # TODO: We have not yet resolved all user - profile preloads related to profile generalization
+    Bullet.add_safelist(type: :n_plus_one_query, class_name: "User", association: :profile)
+    Bullet.add_safelist(type: :n_plus_one_query, class_name: "Profile", association: :user)
+    Bullet.add_safelist(type: :n_plus_one_query, class_name: "User", association: :setting)
+    Bullet.add_safelist(type: :n_plus_one_query, class_name: "User", association: :notification_setting)
+    # @mstruve: These occur during setting updates, not sure how since we are only dealing with single setting records
+    Bullet.add_safelist(type: :n_plus_one_query, class_name: "Users::Setting", association: :user)
+    Bullet.add_safelist(type: :n_plus_one_query, class_name: "Users::NotificationSetting", association: :user)
   end
 end
 # rubocop:enable Metrics/BlockLength
-
-Rails.application.routes.default_url_options = { host: "test.host" }
+Rails.application.routes.default_url_options = { host: Rails.application.config.app_domain }

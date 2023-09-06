@@ -5,13 +5,13 @@ class ApplicationController < ActionController::Base
   protect_from_forgery with: :exception, prepend: true
   before_action :remember_cookie_sync
   before_action :forward_to_app_config_domain
+  before_action :determine_locale
 
   include SessionCurrentUser
   include ValidRequest
-  include Pundit
+  include Pundit::Authorization
   include CachingHeaders
   include ImageUploads
-  include VerifySetupCompleted
   include DevelopmentDependencyChecks if Rails.env.development?
   include EdgeCacheSafetyCheck unless Rails.env.production?
   include Devise::Controllers::Rememberable
@@ -29,25 +29,47 @@ class ApplicationController < ActionController::Base
     )
   end
 
+  rescue_from ApplicationPolicy::UserSuspendedError, with: :respond_with_user_suspended
+
   PUBLIC_CONTROLLERS = %w[async_info
                           confirmations
                           deep_links
                           ga_events
                           health_checks
+                          instances
                           invitations
                           omniauth_callbacks
                           passwords
                           registrations
-                          service_worker
-                          shell].freeze
+                          service_worker].freeze
   private_constant :PUBLIC_CONTROLLERS
 
   CONTENT_CHANGE_PATHS = [
-    "/tags/onboarding", # Needs to change when suggested_tags is edited.
+    "/onboarding/tags", # Needs to change when suggested_tags is edited.
     "/onboarding", # Page is cached at edge.
     "/", # Page is cached at edge.
   ].freeze
   private_constant :CONTENT_CHANGE_PATHS
+
+  # @!scope class
+  # @!attribute [w] api_action
+  #   If set to true, all actions on the class (and subclasses) will be considered "api_actions"
+  #
+  #   @param input [Boolean]
+  #   @see ApplicationController#api_action?
+  #   @see ApplicationController#verify_private_forem
+  #   @see https://api.rubyonrails.org/classes/Class.html#method-i-class_attribute Class.class_attribute
+  class_attribute :api_action, default: false, instance_writer: false
+
+  # @!scope instance
+  # @!attribute [r] api_action?
+  #   By default, all actions are *not* an `api_action?`
+  #   @return [TrueClass] if the current requested action is for the API
+  #   @return [FalseClass] if the current requested action is not part of the API
+  #   @see Api::V0::ApiController
+  #   @see Api::V1::ApiController
+  #   @see ApplicationController.api_action
+  #   @see ApplicationController#verify_private_forem
 
   def verify_private_forem
     return if controller_name.in?(PUBLIC_CONTROLLERS)
@@ -64,21 +86,41 @@ class ApplicationController < ActionController::Base
     end
   end
 
+  # When called, raise ActiveRecord::RecordNotFound.
+  #
+  # @raise [ActiveRecord::RecordNotFound] when called
   def not_found
     raise ActiveRecord::RecordNotFound, "Not Found"
   end
 
+  # When called, raise ActionController::RoutingError.
+  # @raise [ActionController::RoutingError] when called
   def routing_error
     raise ActionController::RoutingError, "Routing Error"
   end
 
+  # When called render unauthorized JSON status and raise Pundit::NotAuthorizedError
+  #
+  # @raise [Pundit::NotAuthorizedError]
+  #
+  # @note [@jeremyf] It's a little surprising that we both render a JSON response and raise an
+  #       exception.
   def not_authorized
-    render json: "Error: not authorized", status: :unauthorized
-    raise NotAuthorizedError, "Unauthorized"
+    render json: { error: I18n.t("application_controller.not_authorized") }, status: :unauthorized
+    raise Pundit::NotAuthorizedError, "Unauthorized"
   end
 
   def bad_request
-    render json: "Error: Bad Request", status: :bad_request
+    respond_to do |format|
+      format.html do
+        raise if Rails.env.development?
+
+        render plain: "The request could not be understood (400).", status: :bad_request
+      end
+      format.json do
+        render json: { error: I18n.t("application_controller.bad_request") }, status: :bad_request
+      end
+    end
   end
 
   def error_too_many_requests(exc)
@@ -86,20 +128,49 @@ class ApplicationController < ActionController::Base
     render json: { error: exc.message, status: 429 }, status: :too_many_requests
   end
 
-  def authenticate_user!
-    if current_user
-      Honeycomb.add_field("current_user_id", current_user.id)
-      return
-    end
+  # This method is envisioned as a :before_action callback.
+  #
+  # @return [TrueClass] if we have a current_user
+  # @return [FalseClass] if we don't have a current_user
+  #
+  # @see {#authenticate_user!} for when you want to raise an error if we don't have a current user.
+  def authenticate_user
+    return false unless current_user
 
+    Honeycomb.add_field("current_user_id", current_user.id)
+    true
+  end
+
+  # @deprecated Use {#authenticate_user} and #{ApplicationPolicy}.
+  #
+  # When we don't have a current user, render a response that prompts the requester to authenticate.
+  # This function circumvents the work that should be done in the {ApplicationPolicy} layer.
+  #
+  # @return [TrueClass] if we have an authenticated user
+  #
+  # @note This method is envisioned as a :before_action callback.
+  #
+  # @see {#authenticate_user}
+  # @see {ApplicationPolicy} for discussion around authentication and authorization.
+  def authenticate_user!
+    return true if authenticate_user
+
+    respond_with_request_for_authentication
+  end
+
+  def respond_with_request_for_authentication
     respond_to do |format|
       format.html { redirect_to sign_up_path }
-      format.json { render json: { error: "Please sign in" }, status: :unauthorized }
+      format.json { render json: { error: I18n.t("application_controller.please_sign_in") }, status: :unauthorized }
     end
   end
 
-  def redirect_permanently_to(location)
-    redirect_to location + internal_nav_param, status: :moved_permanently
+  def redirect_permanently_to(url = nil, **args)
+    if url
+      redirect_to(url + internal_nav_param, status: :moved_permanently)
+    else
+      redirect_to(args.merge({ i: params[:i] }), status: :moved_permanently)
+    end
   end
 
   def customize_params
@@ -110,12 +181,13 @@ class ApplicationController < ActionController::Base
   # the user to after a successful log in
   def after_sign_in_path_for(resource)
     if current_user.saw_onboarding
-      path = stored_location_for(resource) || request.env["omniauth.origin"] || root_path(signin: "true")
+      path = request.env["omniauth.origin"] || stored_location_for(resource) || root_path(signin: "true")
       signin_param = { "signin" => "true" } # the "signin" param is used by the service worker
 
       uri = Addressable::URI.parse(path)
       uri.query_values = if uri.query_values
-                           uri.query_values.merge(signin_param)
+                           # Ignore i=i (internal navigation) param
+                           uri.query_values.except("i").merge(signin_param)
                          else
                            signin_param
                          end
@@ -131,8 +203,16 @@ class ApplicationController < ActionController::Base
     onboarding_path
   end
 
-  def raise_suspended
-    raise SuspendedError if current_user&.suspended?
+  # @deprecated This is a policy related question and should be part of an ApplicationPolicy
+  def check_suspended
+    return unless current_user&.suspended?
+
+    respond_with_user_suspended
+  end
+
+  def respond_with_user_suspended
+    response.status = :forbidden
+    render "pages/forbidden"
   end
 
   def internal_navigation?
@@ -162,11 +242,7 @@ class ApplicationController < ActionController::Base
   end
 
   def anonymous_user
-    User.new(ip_address: request.env["HTTP_FASTLY_CLIENT_IP"])
-  end
-
-  def api_action?
-    self.class.to_s.start_with?("Api::")
+    User.new(ip_address: request.env["HTTP_FASTLY_CLIENT_IP"] || request.remote_ip)
   end
 
   def initialize_stripe
@@ -175,6 +251,14 @@ class ApplicationController < ActionController::Base
     return unless Rails.env.development? && Stripe.api_key.present?
 
     Stripe.log_level = Stripe::LEVEL_INFO
+  end
+
+  def determine_locale
+    I18n.locale = if %w[en fr].include?(params[:locale])
+                    params[:locale]
+                  else
+                    Settings::UserExperience.default_locale
+                  end
   end
 
   def remember_cookie_sync
@@ -203,10 +287,17 @@ class ApplicationController < ActionController::Base
     Settings::General.admin_action_taken_at = Time.current # Used as cache key
   end
 
-  protected
+  def feature_flag_enabled?(flag_name, acting_as: current_user)
+    FeatureFlag.enabled_for_user?(flag_name, acting_as)
+  end
+
+  helper_method :feature_flag_enabled?
+
+  private
 
   def configure_permitted_parameters
     devise_parameter_sanitizer.permit(:sign_up, keys: %i[username name profile_image profile_image_url])
+    devise_parameter_sanitizer.permit(:accept_invitation, keys: %i[name])
   end
 
   def internal_nav_param

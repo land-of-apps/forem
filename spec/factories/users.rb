@@ -7,30 +7,35 @@ FactoryBot.define do
   image_path = Rails.root.join("spec/support/fixtures/images/image1.jpeg")
 
   factory :user do
-    name                         { Faker::Name.name }
-    email                        { generate :email }
-    username                     { generate :username }
+    # Creating a name that has includes double quotes and backslashes.
+    # This way we can see if things are parsing correctly.
+    name do
+      "#{Faker::Name.first_name} \"#{Faker::Name.first_name}\" \\:/ #{Faker::Name.last_name}"
+    end
+    email                        { generate(:email) }
+    username                     { generate(:username) }
     profile_image                { Rack::Test::UploadedFile.new(image_path, "image/jpeg") }
-    twitter_username             { generate :twitter_username }
-    github_username              { generate :github_username }
+    twitter_username             { generate(:twitter_username) }
+    github_username              { generate(:github_username) }
     confirmed_at                 { Time.current }
     saw_onboarding               { true }
     checked_code_of_conduct      { true }
     checked_terms_and_conditions { true }
-    display_announcements        { true }
     registered_at                { Time.current }
     signup_cta_variant           { "navbar_basic" }
-    email_digest_periodic        { false }
 
     trait :with_identity do
-      transient { identities { Authentication::Providers.available } }
+      transient do
+        identities { Authentication::Providers.available }
+        uid { nil }
+      end
 
       after(:create) do |user, options|
         options.identities.each do |provider|
           auth = OmniAuth.config.mock_auth.fetch(provider.to_sym)
           create(
             :identity,
-            user: user, provider: provider, uid: auth.uid, auth_data_dump: auth,
+            user: user, provider: provider, uid: options.uid || auth.uid, auth_data_dump: auth,
           )
         end
       end
@@ -55,8 +60,19 @@ FactoryBot.define do
       after(:build) { |user| user.add_role(:super_admin) }
     end
 
+    trait :creator do
+      after(:build) do |user|
+        user.add_role(:super_admin)
+        user.add_role(:creator)
+      end
+    end
+
     trait :admin do
       after(:build) { |user| user.add_role(:admin) }
+    end
+
+    trait :super_moderator do
+      after(:build) { |user| user.add_role(:super_moderator) }
     end
 
     trait :single_resource_admin do
@@ -96,6 +112,18 @@ FactoryBot.define do
 
     trait :suspended do
       after(:build) { |user| user.add_role(:suspended) }
+    end
+
+    trait :warned do
+      after(:build) { |user| user.add_role(:warned) }
+    end
+
+    trait :comment_suspended do
+      after(:build) { |user| user.add_role(:comment_suspended) }
+    end
+
+    trait :limited do
+      after(:build) { |user| user.add_role(:limited) }
     end
 
     trait :invited do
@@ -164,8 +192,10 @@ FactoryBot.define do
     end
 
     trait :with_newsletters do
-      email_newsletter { true }
-      email_digest_periodic { true }
+      after(:create) do |user|
+        Users::NotificationSetting.find_by(user_id: user.id)
+          .update_columns(email_newsletter: true, email_digest_periodic: true)
+      end
     end
   end
 end

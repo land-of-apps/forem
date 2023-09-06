@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe "Registrations", type: :request do
+RSpec.describe "Registrations" do
   let(:user) { create(:user) }
 
   describe "Log In" do
@@ -10,7 +10,6 @@ RSpec.describe "Registrations", type: :request do
 
         Authentication::Providers.enabled.each do |provider_name|
           provider = Authentication::Providers.get!(provider_name)
-          next if provider.provider_name == :apple && !Flipper.enabled?(:apple_auth)
 
           expect(response.body).to include("Continue with #{provider.official_name}")
         end
@@ -22,7 +21,7 @@ RSpec.describe "Registrations", type: :request do
 
         get sign_up_path
 
-        expect(response.body).not_to include("Have a password? Continue with your email address")
+        expect(response.body).not_to include("Have a password? Log in")
       end
     end
 
@@ -46,7 +45,7 @@ RSpec.describe "Registrations", type: :request do
       it "does not show the sign in text for password based authentication" do
         get sign_up_path
 
-        expect(response.body).not_to include("Have a password? Continue with your email address")
+        expect(response.body).not_to include("Have a password? Log in")
       end
     end
 
@@ -77,7 +76,23 @@ RSpec.describe "Registrations", type: :request do
       it "shows the sign in text for password based authentication" do
         get sign_up_path, params: { state: "new-user" }
 
-        expect(response.body).to include("View more sign in options")
+        expect(response.body).to include("Already have an account? <a href=\"/enter\">Log in</a>")
+      end
+
+      it "persists uploaded image" do
+        name = "test"
+        image_path = Rails.root.join("spec/support/fixtures/images/image1.jpeg")
+        post users_path, params: {
+          user: {
+            name: name,
+            username: "username",
+            email: "yo@whatup.com",
+            password: "password",
+            password_confirmation: "password",
+            profile_image: Rack::Test::UploadedFile.new(image_path, "image/jpeg")
+          }
+        }
+        expect(File.read(User.last.profile_image.file.file)).to eq(File.read(image_path))
       end
 
       it "creates a user with a random profile image if none was uploaded" do
@@ -132,17 +147,16 @@ RSpec.describe "Registrations", type: :request do
       end
     end
 
-    context "with the creator_onboarding feature flag" do
+    context "when going through the Creator Onboarding flow" do
       before do
-        allow(FeatureFlag).to receive(:enabled?).with(:creator_onboarding).and_return(true)
         allow(Settings::General).to receive(:waiting_on_first_user).and_return(true)
         allow(Settings::UserExperience).to receive(:public).and_return(false)
       end
 
       it "renders the creator onboarding form" do
         get root_path
-        expect(response.body).to include("Let's create an admin account for your community.")
-        expect(response.body).to include("Create admin account")
+        expect(response.body).to include(CGI.escapeHTML("Let's start your Forem journey!"))
+        expect(response.body).to include("Create your admin account first")
       end
     end
   end
@@ -159,9 +173,9 @@ RSpec.describe "Registrations", type: :request do
       end
 
       it "auto-populates forem_owner_secret if included in querystring params" do
-        get new_user_registration_path(forem_owner_secret: ENV["FOREM_OWNER_SECRET"])
+        get new_user_registration_path(forem_owner_secret: ENV.fetch("FOREM_OWNER_SECRET", nil))
         expect(response.body).not_to include("New Forem Secret")
-        expect(response.body).to include(ENV["FOREM_OWNER_SECRET"])
+        expect(response.body).to include(ENV.fetch("FOREM_OWNER_SECRET", nil))
       end
 
       it "shows forem_owner_secret field if it's not included in querystring params" do
@@ -216,7 +230,7 @@ RSpec.describe "Registrations", type: :request do
         expect(User.all.size).to be 1
       end
 
-      it "marks as registerd" do
+      it "marks as registered" do
         post "/users", params:
         { user: { name: "test #{rand(10)}",
                   username: "haha_#{rand(10)}",
@@ -224,7 +238,7 @@ RSpec.describe "Registrations", type: :request do
                   password: "PaSSw0rd_yo000",
                   password_confirmation: "PaSSw0rd_yo000" } }
         expect(User.last.registered).to be true
-        expect(User.last.registered_at).not_to be nil
+        expect(User.last.registered_at).not_to be_nil
       end
 
       it "does not create user with password confirmation mismatch" do
@@ -364,8 +378,8 @@ RSpec.describe "Registrations", type: :request do
                     email: "yoooo#{rand(100)}@yo.co",
                     password: "PaSSw0rd_yo000",
                     password_confirmation: "PaSSw0rd_yo000" } }
-        expect(User.first.has_role?(:super_admin)).to be true
-        expect(User.first.has_role?(:trusted)).to be true
+        expect(User.first.super_admin?).to be true
+        expect(User.first.trusted?).to be true
       end
 
       it "creates mascot user" do
@@ -392,7 +406,7 @@ RSpec.describe "Registrations", type: :request do
                     password: "PaSSw0rd_yo000",
                     forem_owner_secret: "test",
                     password_confirmation: "PaSSw0rd_yo000" } }
-        expect(User.first.has_role?(:super_admin)).to be true
+        expect(User.first.super_admin?).to be true
       end
 
       it "does not authorize request in FOREM_OWNER_SECRET scenario if not passed correct value" do
@@ -405,16 +419,26 @@ RSpec.describe "Registrations", type: :request do
                       password: "PaSSw0rd_yo000",
                       forem_owner_secret: "not_test",
                       password_confirmation: "PaSSw0rd_yo000" } }
-          expect(User.first).to be nil
+          expect(User.first).to be_nil
         end.to raise_error Pundit::NotAuthorizedError
+      end
+
+      it "enqueues Discover::RegisterWorker" do
+        sidekiq_assert_enqueued_with(job: Discover::RegisterWorker) do
+          post "/users", params:
+            { user: { name: "test #{rand(10)}",
+                      username: "haha_#{rand(10)}",
+                      email: "yoooo#{rand(100)}@yo.co",
+                      password: "PaSSw0rd_yo000",
+                      forem_owner_secret: "test",
+                      password_confirmation: "PaSSw0rd_yo000" } }
+        end
       end
     end
 
-    context "with the creator_onboarding feature flag" do
+    context "when going through the Creator Onboarding flow" do
       before do
         allow_any_instance_of(ProfileImageUploader).to receive(:download!)
-        allow(FeatureFlag).to receive(:enabled?).with(:creator_onboarding).and_return(true)
-        allow(FeatureFlag).to receive(:enabled?).with(:runtime_banner).and_return(false)
         allow(Settings::General).to receive(:waiting_on_first_user).and_return(true)
       end
 
@@ -438,7 +462,7 @@ RSpec.describe "Registrations", type: :request do
                     email: "yoooo#{rand(100)}@yo.co",
                     password: "PaSSw0rd_yo000",
                     password_confirmation: "PaSSw0rd_yo000" } }
-        expect(User.first.has_role?(:super_admin)).to be true
+        expect(User.first.super_admin?).to be true
       end
     end
   end

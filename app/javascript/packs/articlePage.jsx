@@ -1,11 +1,21 @@
 import { h, render } from 'preact';
-import ahoy from 'ahoy.js';
 import { Snackbar, addSnackbarItem } from '../Snackbar';
 import { addFullScreenModeControl } from '../utilities/codeFullscreenModeSwitcher';
+import { initializeDropdown } from '../utilities/dropdownUtils';
+import { setupBillboardDropdown } from '../utilities/billboardDropdown';
 import { embedGists } from '../utilities/gist';
-import { initializeDropdown } from '@utilities/dropdownUtils';
+import { initializeUserSubscriptionLiquidTagContent } from '../liquidTags/userSubscriptionLiquidTag';
+import { trackCommentClicks } from '@utilities/ahoy/trackEvents';
+import { isNativeAndroid, copyToClipboard } from '@utilities/runtime';
 
-/* global Runtime */
+const animatedImages = document.querySelectorAll('[data-animated="true"]');
+if (animatedImages.length > 0) {
+  import('@utilities/animatedImageUtils').then(
+    ({ initializePausableAnimatedImages }) => {
+      initializePausableAnimatedImages(animatedImages);
+    },
+  );
+}
 
 const fullscreenActionElements = document.getElementsByClassName(
   'js-fullscreen-code-action',
@@ -18,11 +28,25 @@ if (fullscreenActionElements) {
 // The Snackbar for the article page
 const snackZone = document.getElementById('snack-zone');
 if (snackZone) {
-  render(<Snackbar lifespan="3" />, snackZone);
+  render(<Snackbar lifespan={3} />, snackZone);
 }
 
 // eslint-disable-next-line no-restricted-globals
 top.addSnackbarItem = addSnackbarItem;
+
+const multiReactionDrawerTrigger = document.getElementById(
+  'reaction-drawer-trigger',
+);
+
+if (
+  multiReactionDrawerTrigger &&
+  multiReactionDrawerTrigger.dataset.initialized !== 'true'
+) {
+  initializeDropdown({
+    triggerElementId: 'reaction-drawer-trigger',
+    dropdownContentId: 'reaction-drawer',
+  });
+}
 
 // Dropdown accessibility
 function hideCopyLinkAnnouncerIfVisible() {
@@ -33,7 +57,7 @@ function hideCopyLinkAnnouncerIfVisible() {
 const shareDropdownButton = document.getElementById('article-show-more-button');
 
 if (shareDropdownButton.dataset.initialized !== 'true') {
-  if (Runtime.isNativeAndroid('shareText')) {
+  if (isNativeAndroid('shareText')) {
     // Android native apps have enhanced sharing capabilities for Articles and don't use our standard dropdown
     shareDropdownButton.addEventListener('click', () =>
       AndroidBridge.shareText(location.href),
@@ -50,10 +74,7 @@ if (shareDropdownButton.dataset.initialized !== 'true') {
       .querySelectorAll('#article-show-more-dropdown [href]')
       .forEach((link) => {
         link.addEventListener('click', (event) => {
-          closeDropdown(event)
-          
-          // Temporary Ahoy Stats for usage reports
-          ahoy.track('Post Dropdown', { option: event.target.text.trim() });
+          closeDropdown(event);
         });
       });
   }
@@ -63,25 +84,28 @@ if (shareDropdownButton.dataset.initialized !== 'true') {
 
 // Initialize the copy to clipboard functionality
 function showAnnouncer() {
-  const { activeElement } = document;
-  const input =
-    activeElement.localName === 'clipboard-copy'
-      ? activeElement.querySelector('input')
-      : document.getElementById('article-copy-link-input');
-  input.focus();
-  input.setSelectionRange(0, input.value.length);
-
   document.getElementById('article-copy-link-announcer').hidden = false;
 }
 
+function focusOnComments() {
+  if (location.hash === '#comments') {
+    //handle focus event on text area
+    const element = document.getElementById('text-area');
+    const event = new FocusEvent('focus');
+    element.dispatchEvent(event);
+  }
+}
+
 function copyArticleLink() {
-  const inputValue = document.getElementById('article-copy-link-input').value;
-  Runtime.copyToClipboard(inputValue).then(() => {
+  const postUrlValue = document
+    .getElementById('copy-post-url-button')
+    .getAttribute('data-postUrl');
+  copyToClipboard(postUrlValue).then(() => {
     showAnnouncer();
   });
 }
 document
-  .querySelector('clipboard-copy')
+  .getElementById('copy-post-url-button')
   ?.addEventListener('click', copyArticleLink);
 
 // Comment Subscription
@@ -90,6 +114,9 @@ getCsrfToken().then(async () => {
   const root = document.getElementById('comment-subscription');
   const isLoggedIn = userStatus === 'logged-in';
 
+  if (!root) {
+    return;
+  }
   try {
     const {
       getCommentSubscriptionStatus,
@@ -124,64 +151,16 @@ getCsrfToken().then(async () => {
       root,
     );
   } catch (e) {
-    document.getElementById('comment-subscription').innerHTML =
+    root.innerHTML =
       '<p className="color-accent-danger">Unable to load Comment Subscription component.<br />Try refreshing the page.</p>';
   }
 });
 
-// Pin/Unpin article
-// these element are added by initializeBaseUserData.js:addRelevantButtonsToArticle
-const toggleArticlePin = async (button) => {
-  const isPinButton = button.id === 'js-pin-article';
-  const { articleId, path } = button.dataset;
-  const method = isPinButton ? 'PUT' : 'DELETE';
-  const body = method === 'PUT' ? JSON.stringify({ id: articleId }) : null;
-
-  const response = await fetch(path, {
-    method,
-    body,
-    headers: {
-      Accept: 'application/json',
-      'X-CSRF-Token': window.csrfToken,
-      'Content-Type': 'application/json',
-    },
-    credentials: 'same-origin',
-  });
-
-  // response could potentially fail if the article is draft but we don't show
-  // the buttons in those cases, so I think there's no need to handle that scenario client side
-  if (response.ok) {
-    // replace id and label
-    button.id = isPinButton ? 'js-unpin-article' : 'js-pin-article';
-    button.innerHTML = `${isPinButton ? 'Unpin' : 'Pin'} Post`;
-
-    const message = isPinButton
-      ? 'The post has been succesfully pinned'
-      : 'The post has been succesfully unpinned';
-    addSnackbarItem({ message });
-  }
-};
-
-const actionsContainer = document.getElementById('action-space');
-const pinTargets = ['js-pin-article', 'js-unpin-article'];
-actionsContainer.addEventListener('click', async (event) => {
-  if (pinTargets.includes(event.target.id)) {
-    toggleArticlePin(event.target);
-  }
-});
-
-// Initialize the profile preview functionality
-const profilePreviewTrigger = document.getElementById(
-  'profile-preview-trigger',
-);
-if (profilePreviewTrigger?.dataset.initialized !== 'true') {
-  initializeDropdown({
-    triggerElementId: 'profile-preview-trigger',
-    dropdownContentId: 'profile-preview-content',
-  });
-
-  profilePreviewTrigger.dataset.initialized = 'true';
-}
-
 const targetNode = document.querySelector('#comments');
 targetNode && embedGists(targetNode);
+
+setupBillboardDropdown();
+initializeUserSubscriptionLiquidTagContent();
+focusOnComments();
+// Temporary Ahoy Stats for comment section clicks on controls
+trackCommentClicks('comments');

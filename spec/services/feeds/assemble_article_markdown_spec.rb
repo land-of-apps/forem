@@ -1,19 +1,24 @@
 require "rails_helper"
 
 RSpec.describe Feeds::AssembleArticleMarkdown, type: :service do
-  let(:user) { create(:user, feed_mark_canonical: true) }
+  let(:user) do
+    create(:user).tap do |u|
+      u.setting.update(feed_mark_canonical: true)
+    end
+  end
   let(:feed_source_url) { "https://feed.source/url" }
-  let(:feed) { instance_double("Feedjira::Parser::RSS", url: "https://feed.source/") }
+  let(:feed) { instance_double(Feedjira::Parser::RSS, url: "https://feed.source/") }
   let(:title) { "A title" }
   let(:content) { "Some content that came in with the item, should be the body" }
 
   let(:item) do
     instance_double(
-      "Feedjira::Parser::RSSEntry",
+      Feedjira::Parser::RSSEntry,
       title: title,
       categories: %w[tag1 tag2 tag3 tag4 tag5],
       published: "2020-12-20",
       content: content,
+      url: "https://feed.source",
     )
   end
 

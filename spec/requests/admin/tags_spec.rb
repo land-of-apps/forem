@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe "/admin/content_manager/tags", type: :request do
+RSpec.describe "/admin/content_manager/tags" do
   let(:super_admin) { create(:user, :super_admin) }
   let(:tag)         { create(:tag) }
   let(:badge)       { create(:badge) }
@@ -13,7 +13,7 @@ RSpec.describe "/admin/content_manager/tags", type: :request do
       short_summary: "Everything WWW related ", rules_markdown: "## NO SPAM",
       submission_template: "# <TITLE>\n\n<ARTICLE_BODY>",
       pretty_name: "dubdubdub", bg_color_hex: "#333333",
-      text_color_hex: "#ffffff", badge_id: badge.id, category: "site_mechanic",
+      text_color_hex: "#ffffff", badge_id: badge.id,
       social_preview_template: "article"
     }
   end
@@ -27,14 +27,14 @@ RSpec.describe "/admin/content_manager/tags", type: :request do
   describe "GET /admin/content_manager/tags" do
     it "responds with 200 OK" do
       get admin_tags_path
-      expect(response.status).to eq 200
+      expect(response).to have_http_status :ok
     end
   end
 
   describe "GET /admin/content_manager/tags/:id" do
     it "responds with 200 OK" do
       get edit_admin_tag_path(tag.id)
-      expect(response.status).to eq 200
+      expect(response).to have_http_status :ok
     end
   end
 
@@ -73,6 +73,10 @@ RSpec.describe "/admin/content_manager/tags", type: :request do
 
       expect(article1.reload.cached_tag_list).to eq "ruby, rails"
       expect(article2.reload.cached_tag_list).to eq "rails, webdev"
+    end
+
+    it "disallows updates to name" do
+      expect { put_resource }.not_to change { tag.reload.name }
     end
   end
 end

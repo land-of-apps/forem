@@ -78,7 +78,7 @@ export const EditorFormattingHelp = ({ openModal }) => (
               <tr>
                 <td className="ff-monospace">&gt; quoted text</td>
                 <td>
-                  <span className="pl-2 border-0 border-solid border-l-4 border-base-50">
+                  <span className="pl-2 border-0 border-solid border-l-2 border-base-50">
                     quoted text
                   </span>
                 </td>
@@ -108,20 +108,21 @@ export const EditorFormattingHelp = ({ openModal }) => (
         </details>
       </li>
       <li>
-        You can use{' '}
+        Embed rich content such as Tweets, YouTube videos, etc. Use the complete
+        URL: <code>{'{% embed https://... %}.'}</code>{' '}
         <a href="#liquid" onClick={() => openModal('liquidShowing')}>
-          Liquid tags
-        </a>{' '}
-        to add rich content such as Tweets, YouTube videos, etc.
+          See a list of supported embeds
+        </a>
+        .
       </li>
       <li>
         In addition to images for the post's content, you can also drag and drop
-        a cover image
+        a cover image.
       </li>
     </ul>
   </div>
 );
 
 EditorFormattingHelp.propTypes = {
-  toggleModal: PropTypes.func.isRequired,
+  openModal: PropTypes.func.isRequired,
 };

@@ -63,7 +63,7 @@ RSpec.describe "Authenticating with GitHub" do
       end
 
       after do
-        OmniAuth.config.on_failure = OmniauthHelpers.const_get("OMNIAUTH_DEFAULT_FAILURE_HANDLER")
+        OmniAuth.config.on_failure = OmniauthHelpers.const_get(:OMNIAUTH_DEFAULT_FAILURE_HANDLER)
       end
 
       it "does not create a new user" do
@@ -127,7 +127,7 @@ RSpec.describe "Authenticating with GitHub" do
       end
     end
 
-    context "when a validation failure occurrs" do
+    context "when a validation failure occurs" do
       before do
         # A User is invalid if their name is more than 100 chars long
         OmniAuth.config.mock_auth[:github].extra.raw_info.name = "X" * 101
@@ -198,9 +198,9 @@ RSpec.describe "Authenticating with GitHub" do
     end
   end
 
-  context "when community is in invite only mode" do
+  context "when community is in invite-only mode" do
     before do
-      allow(ForemInstance).to receive(:private?).and_return(true)
+      allow(ForemInstance).to receive(:invitation_only?).and_return(true)
     end
 
     it "doesn't present the authentication option" do

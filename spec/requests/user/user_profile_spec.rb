@@ -1,10 +1,11 @@
 require "rails_helper"
 
-RSpec.describe "UserProfiles", type: :request do
+RSpec.describe "UserProfiles" do
   let(:user) { create(:user) }
   let(:organization) { create(:organization) }
+  let(:current_user) { create(:user) }
 
-  describe "GET /user" do
+  describe "GET /:username" do
     it "renders to appropriate page" do
       get "/#{user.username}"
       expect(response.body).to include CGI.escapeHTML(user.name)
@@ -25,41 +26,26 @@ RSpec.describe "UserProfiles", type: :request do
     end
 
     it "does not render pins if they don't exist" do
-      get "/#{user.username}"
+      get "/#{user.username}?i=i" # Pinned will still be present in layout file, but not the "internal" version
       expect(response.body).not_to include "Pinned"
     end
 
     it "renders profile page of user after changed username" do
       old_username = user.username
-      user.update(username: "new_username_yo_#{rand(10_000)}")
+      user.update_columns(username: "new_username_yo_#{rand(10_000)}", old_username: old_username,
+                          old_old_username: user.old_username)
       get "/#{old_username}"
       expect(response).to redirect_to("/#{user.username}")
     end
 
     it "renders profile page of user after two changed usernames" do
       old_username = user.username
-      user.update(username: "new_hotness_#{rand(10_000)}")
-      user.update(username: "new_new_username_#{rand(10_000)}")
+      user.update_columns(username: "new_hotness_#{rand(10_000)}", old_username: old_username,
+                          old_old_username: user.old_username)
+      user.update_columns(username: "new_new_username_#{rand(10_000)}", old_username: user.username,
+                          old_old_username: user.old_username)
       get "/#{old_username}"
       expect(response).to redirect_to("/#{user.username}")
-    end
-
-    it "raises not found for banished users" do
-      banishable_user = create(:user)
-      Moderator::BanishUser.call(admin: user, user: banishable_user)
-      expect { get "/#{banishable_user.reload.old_username}" }.to raise_error(ActiveRecord::RecordNotFound)
-      expect { get "/#{banishable_user.reload.username}" }.to raise_error(ActiveRecord::RecordNotFound)
-    end
-
-    it "raises not found if user not registered" do
-      user.update_column(:registered, false)
-      expect { get "/#{user.username}" }.to raise_error(ActiveRecord::RecordNotFound)
-    end
-
-    it "renders noindex meta if suspended" do
-      user.add_role(:suspended)
-      get "/#{user.username}"
-      expect(response.body).to include("<meta name=\"robots\" content=\"noindex\">")
     end
 
     it "does not render noindex meta if not suspended" do
@@ -98,19 +84,12 @@ RSpec.describe "UserProfiles", type: :request do
       expect(response.body.split("Whoaaaa").first).to include "crayons-layout__sidebar-left"
     end
 
-    it "does not render settings_only on page" do
-      create(:profile_field, label: "whoaaaa", display_area: "settings_only")
-      get "/#{user.username}"
-      expect(response.body).not_to include "Whoaaaa"
-    end
-
     it "does not render special display header elements naively" do
-      user.location = "hawaii"
-      user.save
+      user.profile.update(location: "hawaii")
       get "/#{user.username}"
       # Does not include the word, but does include the SVG
       expect(response.body).not_to include "<p>Location</p>"
-      expect(response.body).to include user.location
+      expect(response.body).to include user.profile.location
       expect(response.body).to include "M18.364 17.364L12 23.728l-6.364-6.364a9 9 0 1112.728 0zM12 13a2 2 0 100-4 2 2 0"
     end
 
@@ -124,17 +103,6 @@ RSpec.describe "UserProfiles", type: :request do
         create(:organization_membership, user_id: user.id, organization_id: organization.id)
         get organization.path
         expect(response.body).to include user.profile_image_url
-      end
-
-      it "renders no sponsors if not sponsor" do
-        get organization.path
-        expect(response.body).not_to include "Gold Community Sponsor"
-      end
-
-      it "renders sponsor if it is sponsored" do
-        create(:sponsorship, level: :gold, status: :live, organization: organization)
-        get organization.path
-        expect(response.body).to include "Gold Community Sponsor"
       end
 
       it "renders organization name properly encoded" do
@@ -209,13 +177,59 @@ RSpec.describe "UserProfiles", type: :request do
         expect(response.body).not_to include("github-repos-container")
       end
     end
+
+    # rubocop:disable RSpec/NestedGroups
+    describe "not found and no index behaviour" do
+      it "raises not found for banished users" do
+        banishable_user = create(:user)
+        Moderator::BanishUser.call(admin: user, user: banishable_user)
+        expect { get "/#{banishable_user.reload.old_username}" }.to raise_error(ActiveRecord::RecordNotFound)
+        expect { get "/#{banishable_user.reload.username}" }.to raise_error(ActiveRecord::RecordNotFound)
+      end
+
+      context "when a user is signed in" do
+        it "does not raise not found for suspended users who have no current content" do
+          sign_in current_user
+
+          suspended_user = create(:user)
+          suspended_user.add_role(:suspended)
+          create(:article, user_id: user.id, published: false, published_at: Date.tomorrow)
+
+          expect { get "/#{suspended_user.username}" }.not_to raise_error(ActiveRecord::RecordNotFound)
+        end
+      end
+
+      context "when a user is not signed in" do
+        it "raises not found for suspended users who do not have published content" do
+          suspended_user = create(:user)
+          suspended_user.add_role(:suspended)
+          create(:article, user_id: user.id, published: false, published_at: Date.tomorrow)
+
+          expect { get "/#{suspended_user.username}" }.to raise_error(ActiveRecord::RecordNotFound)
+        end
+      end
+
+      it "renders noindex meta if suspended (and has published content)" do
+        user.add_role(:suspended)
+
+        create(:article, user_id: user.id)
+        get "/#{user.username}"
+        expect(response.body).to include("<meta name=\"robots\" content=\"noindex\">")
+      end
+
+      it "raises not found if user not registered" do
+        user.update_column(:registered, false)
+        expect { get "/#{user.username}" }.to raise_error(ActiveRecord::RecordNotFound)
+      end
+    end
+    # rubocop:enable RSpec/NestedGroups
   end
 
   describe "redirect to moderation" do
     it "redirects to admin" do
       user = create(:user)
       get "/#{user.username}/admin"
-      expect(response.body).to redirect_to edit_admin_user_path(user.id)
+      expect(response.body).to redirect_to admin_user_path(user.id)
     end
 
     it "redirects to moderate" do

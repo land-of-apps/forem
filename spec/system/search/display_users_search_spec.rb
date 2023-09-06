@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe "Display users search spec", type: :system, js: true do
+RSpec.describe "Display users search spec", js: true do
   let(:current_user) { create(:user, username: "ironman", name: "Iron Man") }
   let(:found_user) { create(:user, username: "janedoe", name: "Jane Doe") }
   let(:found_two_user) { create(:user, username: "doejane", name: "Doe Jane") }
@@ -26,8 +26,7 @@ RSpec.describe "Display users search spec", type: :system, js: true do
     visit "/search?q=jane&filters=class_name:User"
 
     expect(page).to have_content(found_user.name)
-    expect(find("span.crayons-story__flare-tag").text).to have_content("person")
     expect(find(:xpath, "//img[@alt='#{found_user.username} profile']")["src"]).to include(found_user.profile_image_90)
-    expect(JSON.parse(find_button("Follow")["data-info"])["id"]).to eq(found_user.id)
+    expect(JSON.parse(find_button(I18n.t("core.follow"))["data-info"])["id"]).to eq(found_user.id)
   end
 end

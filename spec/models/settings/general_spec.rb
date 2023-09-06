@@ -1,11 +1,11 @@
 require "rails_helper"
 
-RSpec.describe Settings::General, type: :model do
+RSpec.describe Settings::General do
   describe "validations" do
     describe "validating URLs" do
       let(:url_fields) do
         %w[
-          main_social_image logo_png mascot_image_url onboarding_background_image
+          main_social_image logo_png mascot_image_url
         ]
       end
 

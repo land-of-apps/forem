@@ -22,6 +22,8 @@ export const Article = ({
   isBookmarked,
   bookmarkClick,
   feedStyle,
+  pinned,
+  saveable,
 }) => {
   if (article && article.type_of === 'podcast_episodes') {
     return <PodcastArticle article={article} />;
@@ -82,7 +84,7 @@ export const Article = ({
         <div className="crayons-story__body">
           <div className="crayons-story__top">
             <Meta article={article} organization={article.organization} />
-            {article.pinned && (
+            {pinned && (
               <div
                 className="pinned color-accent-brand fw-bold"
                 data-testid="pinned-article"
@@ -120,6 +122,7 @@ export const Article = ({
                   <CommentsCount
                     count={article.comments_count}
                     articlePath={article.path}
+                    articleTitle={article.title}
                   />
                 </div>
               )}
@@ -131,6 +134,7 @@ export const Article = ({
                   article={article}
                   isBookmarked={isBookmarked}
                   onClick={bookmarkClick}
+                  saveable={saveable}
                 />
               </div>
             </div>
@@ -153,6 +157,7 @@ Article.defaultProps = {
   isBookmarked: false,
   isFeatured: false,
   feedStyle: 'basic',
+  saveable: true,
 };
 
 Article.propTypes = {
@@ -161,4 +166,6 @@ Article.propTypes = {
   isFeatured: PropTypes.bool,
   feedStyle: PropTypes.string,
   bookmarkClick: PropTypes.func.isRequired,
+  pinned: PropTypes.bool,
+  saveable: PropTypes.bool.isRequired,
 };

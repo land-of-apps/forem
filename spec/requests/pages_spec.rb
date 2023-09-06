@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe "Pages", type: :request do
+RSpec.describe "Pages" do
   describe "GET /:slug" do
     it "has proper headline for non-top-level" do
       page = create(:page, title: "Edna O'Brien96")
@@ -27,7 +27,7 @@ RSpec.describe "Pages", type: :request do
         page.save! # Trigger processing of page.body_html
       end
 
-      it "returns json data " do
+      it "returns json data" do
         get "/page/#{page.slug}"
 
         expect(response.media_type).to eq("application/json")
@@ -83,7 +83,7 @@ RSpec.describe "Pages", type: :request do
   describe "GET /api" do
     it "redirects to the API docs" do
       get "/api"
-      expect(response.body).to redirect_to("https://docs.forem.com/api")
+      expect(response.body).to redirect_to("https://developers.forem.com/api")
     end
   end
 
@@ -128,7 +128,7 @@ RSpec.describe "Pages", type: :request do
 
     it "redirects to the latest welcome thread" do
       earlier_welcome_thread = create(:article, user: user, tags: "welcome")
-      earlier_welcome_thread.update(published_at: Time.current - 1.week)
+      earlier_welcome_thread.update(published_at: 1.week.ago)
       latest_welcome_thread = create(:article, user: user, tags: "welcome")
       get "/welcome"
 
@@ -160,7 +160,7 @@ RSpec.describe "Pages", type: :request do
 
     it "redirects to the latest challenge thread" do
       earlier_challenge_thread = create(:article, user: user, tags: "challenge")
-      earlier_challenge_thread.update(published_at: Time.current - 1.week)
+      earlier_challenge_thread.update(published_at: 1.week.ago)
       latest_challenge_thread = create(:article, user: user, tags: "challenge")
       get "/challenge"
 
@@ -219,19 +219,11 @@ RSpec.describe "Pages", type: :request do
     end
   end
 
-  describe "GET /badge" do
-    it "has proper headline" do
-      html_variant = create(:html_variant, group: "badge_landing_page", published: true, approved: true)
-      get "/badge"
-      expect(response.body).to include(html_variant.html)
-    end
-  end
-
   describe "GET /robots.txt" do
     it "has proper text" do
       get "/robots.txt"
 
-      text = "Sitemap: https://#{ApplicationConfig['AWS_BUCKET_NAME']}.s3.amazonaws.com/sitemaps/sitemap.xml.gz"
+      text = "Sitemap: #{URL.url('sitemap-index.xml')}"
       expect(response.body).to include(text)
     end
   end

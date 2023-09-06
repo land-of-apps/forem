@@ -1,37 +1,15 @@
 <aside class="side-bar sidebar-additional showing grid gap-4" id="sidebar-additional">
-  <% cache(release_adjusted_cache_key("main-article-right-sidebar-discussions-#{params[:timeframe]}"), expires_in: (params[:timeframe].blank? ? 120 : 360).seconds) do %>
-    <% @sidebar_ad = DisplayAd.for_display("sidebar_right") %>
-    <% if @sidebar_ad %>
-      <div class="crayons-card crayons-card--secondary p-4 crayons-sponsorship-widget">
-        <%= @sidebar_ad.processed_html.html_safe %>
-      </div>
+  <% cache(release_adjusted_cache_key("main-article-right-sidebar-discussions-#{params[:timeframe]}-#{user_signed_in?}"), expires_in: (params[:timeframe].blank? ? 120 : 360).seconds) do %>
+    <% @sidebar_billboard = Billboard.for_display(area: "sidebar_right", user_signed_in: user_signed_in?) %>
+    <% if @sidebar_billboard %>
+      <%= render partial: "shared/billboard", locals: { billboard: @sidebar_billboard, data_context_type: BillboardEvent::CONTEXT_TYPE_HOME } %>
     <% end %>
 
     <%= render "articles/sidebar_campaign" if Campaign.current.show_in_sidebar? %>
-    <% @listings = Listing.where(published: true).select(:title, :classified_listing_category_id, :slug, :bumped_at) %>
-    <% if params[:timeframe].blank? && @listings.any? %>
-      <section class="crayons-card crayons-card--secondary">
-        <header class="crayons-card__header">
-          <h3 class="crayons-subtitle-2">Listings</h3>
-          <div class="crayons-card__actions">
-            <a href="/listings" class="crayons-link--branded fw-medium fs-s">See all</a>
-          </div>
-        </header>
-
-        <div>
-          <% @listings.order(bumped_at: :desc).limit(5).each do |listing| %>
-            <a class="crayons-link crayons-link--contentful" href="<%= listing.path %>">
-              <div><%= listing.title %></div>
-              <div class="crayons-link__secondary"><%= listing.category %></div>
-            </a>
-          <% end %>
-          <a class="crayons-link crayons-link--branded block align-center p-3 fw-medium fs-s w-100" href="/listings/new">Create a Listing</a>
-        </div>
-      </section>
-    <% end %>
+    <%= render "articles/sidebar_listings" if Listing.feature_enabled? %>
 
     <% Settings::General.sidebar_tags.each do |tag| %>
-      <section class="crayons-card crayons-card--secondary">
+      <section class="crayons-card crayons-card--secondary crayons-layout__content">
         <header class="crayons-card__header">
           <h3 class="crayons-subtitle-2"><a href="/t/<%= tag %>" class="crayons-link">#<%= tag %></a></h3>
         </header>
@@ -56,7 +34,7 @@
       <% if boostable_posts.present? %>
         <section class="widget">
           <header>
-            <h4>trending guides/resources</h4>
+            <h4><%= t("views.main.side.trend") %></h4>
           </header>
           <div class="widget-body">
             <div class="widget-link-list">
@@ -71,7 +49,7 @@
       <% if params[:timeframe].blank? && recent_preamble_optimized_posts.present? %>
         <section class="widget">
           <header>
-            <h4>recently queried</h4>
+            <h4><%= t("views.main.side.recent") %></h4>
           </header>
           <div class="widget-body">
             <div class="widget-link-list">

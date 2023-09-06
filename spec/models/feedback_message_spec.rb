@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe FeedbackMessage, type: :model do
+RSpec.describe FeedbackMessage do
   let(:reporter) { create(:user) }
   let(:abuse_report) { create(:feedback_message, :abuse_report, reporter: reporter) }
 
@@ -39,7 +39,7 @@ RSpec.describe FeedbackMessage, type: :model do
       it do
         expect(feedback_message).to validate_uniqueness_of(:reporter_id)
           .scoped_to(described_class::REPORTER_UNIQUENESS_SCOPE)
-          .with_message(described_class::REPORTER_UNIQUENESS_MSG)
+          .with_message(described_class.reporter_uniqueness_msg)
       end
 
       it { is_expected.to validate_length_of(:reported_url).is_at_most(250) }
@@ -57,6 +57,28 @@ RSpec.describe FeedbackMessage, type: :model do
       subject(:feedback_message) { create(:feedback_message, :bug_report, reporter: reporter) }
 
       it { is_expected.not_to validate_presence_of(:reported_url) }
+    end
+  end
+
+  describe ".all_user_reports" do
+    let(:user) { create(:user) }
+
+    it "returns reported feedback messages" do
+      report = create(:feedback_message, reporter: user)
+
+      expect(described_class.all_user_reports(user).first.id).to eq(report.id)
+    end
+
+    it "returns affected feedback messages" do
+      report = create(:feedback_message, affected: user)
+
+      expect(described_class.all_user_reports(user).first.id).to eq(report.id)
+    end
+
+    it "returns offender feedback messages" do
+      report = create(:feedback_message, offender: user)
+
+      expect(described_class.all_user_reports(user).first.id).to eq(report.id)
     end
   end
 end

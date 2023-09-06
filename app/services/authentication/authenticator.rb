@@ -12,6 +12,18 @@ module Authentication
   # 2. update an existing user and align it to its authentication identity
   # 3. return the current user if a user is given (already logged in scenario)
   class Authenticator
+    # @api public
+    #
+    # @see #initialize method for parameters
+    #
+    # @return [User] when the given provider is valid
+    #
+    # @raise [Authentication::Errors::PreviouslySuspended] when the user was already suspended
+    # @raise [Authentication::Errors::SpammyEmailDomain] when the associated email is spammy
+    def self.call(...)
+      new(...).call
+    end
+
     # auth_payload is the payload schema, see https://github.com/omniauth/omniauth/wiki/Auth-Hash-Schema
     def initialize(auth_payload, current_user: nil, cta_variant: nil)
       @provider = load_authentication_provider(auth_payload)
@@ -20,12 +32,10 @@ module Authentication
       @cta_variant = cta_variant
     end
 
-    def self.call(...)
-      new(...).call
-    end
-
+    # @api private
     def call
       identity = Identity.build_from_omniauth(provider)
+      guard_against_spam_from!(identity: identity)
       return current_user if current_user_identity_exists?
 
       # These variables need to be set outside of the scope of the
@@ -49,8 +59,6 @@ module Authentication
         log_to_datadog = new_identity && successful_save
         id_provider = identity.provider
 
-        user.skip_confirmation!
-
         flag_spam_user(user) if account_less_than_a_week_old?(user, identity)
 
         user.save!
@@ -72,6 +80,16 @@ module Authentication
     end
 
     private
+
+    def guard_against_spam_from!(identity:)
+      domain = identity.email.split("@")[-1]
+      return unless domain
+      return if Settings::Authentication.acceptable_domain?(domain: domain)
+
+      message = I18n.t("services.authentication.authenticator.not_allowed")
+
+      raise Authentication::Errors::SpammyEmailDomain, message
+    end
 
     attr_reader :provider, :current_user, :cta_variant
 
@@ -110,6 +128,7 @@ module Authentication
         user.assign_attributes(default_user_fields)
 
         user.set_remember_fields
+        user.skip_confirmation!
 
         # The user must be saved in the database before
         # we assign the user to a new identity.
@@ -129,9 +148,20 @@ module Authentication
     end
 
     def update_user(user)
+      return user if user.suspended?
+
       user.tap do |model|
-        user.unlock_access! if user.access_locked?
-        user.assign_attributes(provider.existing_user_data)
+        model.unlock_access! if model.access_locked?
+
+        if model.confirmed?
+          # We don't want to update users' email or any other fields if they're
+          # connecting an existing account that already has a confirmed email.
+          model.assign_attributes(provider.existing_user_data.except(:email))
+        else
+          # If the user doesn't have a confirmed email we can update their email
+          # and trust it because the auth provider confirmed email ownership
+          model.assign_attributes(provider.existing_user_data)
+        end
 
         update_profile_updated_at(model)
 

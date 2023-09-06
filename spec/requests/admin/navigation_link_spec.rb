@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe "NavigationLinks", type: :request do
+RSpec.describe "NavigationLinks" do
   let(:admin) { create(:user, :super_admin) }
 
   before do
@@ -12,7 +12,7 @@ RSpec.describe "NavigationLinks", type: :request do
 
     it "returns a successful response" do
       get admin_navigation_links_path
-      expect(response.status).to eq 200
+      expect(response).to have_http_status :ok
     end
   end
 
@@ -60,12 +60,19 @@ RSpec.describe "NavigationLinks", type: :request do
       expect(response).to redirect_to admin_navigation_links_path
     end
 
-    it "updates the profile field values" do
+    it "updates the navigation-link field values" do
       put admin_navigation_link_path(navigation_link.id),
           params: { navigation_link: { name: "Example" } }
 
       changed_navigation_link_record = NavigationLink.find(navigation_link.id)
       expect(changed_navigation_link_record.name).to eq("Example")
+      expect(changed_navigation_link_record.other_section?).to be(false)
+
+      put admin_navigation_link_path(navigation_link.id),
+          params: { navigation_link: { section: "other" } }
+
+      changed_navigation_link_record2 = NavigationLink.find(navigation_link.id)
+      expect(changed_navigation_link_record2.other_section?).to be(true)
     end
   end
 

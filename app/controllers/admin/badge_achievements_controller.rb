@@ -15,11 +15,10 @@ module Admin
       @badge_achievement = BadgeAchievement.find(params[:id])
 
       if @badge_achievement.destroy
-        flash[:success] = "Badge achievement has been deleted!"
+        render json: { message: I18n.t("admin.badge_achievements_controller.deleted") }, status: :ok
       else
-        flash[:danger] = @badge_achievement.errors_as_sentence
+        render json: { error: "Something went wrong." }, status: :unprocessable_entity
       end
-      redirect_to admin_badge_achievements_path
     end
 
     def award
@@ -27,13 +26,16 @@ module Admin
     end
 
     def award_badges
-      raise ArgumentError, "Please choose a badge to award" if permitted_params[:badge].blank?
+      if permitted_params[:badge].blank?
+        raise ArgumentError,
+              I18n.t("admin.badge_achievements_controller.award")
+      end
 
       usernames = permitted_params[:usernames].downcase.split(/\s*,\s*/)
-      message = permitted_params[:message_markdown].presence || "Congrats!"
+      message = permitted_params[:message_markdown].presence || I18n.t("admin.badge_achievements_controller.congrats")
       BadgeAchievements::BadgeAwardWorker.perform_async(usernames, permitted_params[:badge], message)
 
-      flash[:success] = "Badges are being rewarded. The task will finish shortly."
+      flash[:success] = I18n.t("admin.badge_achievements_controller.rewarded")
       redirect_to admin_badge_achievements_path
     rescue ArgumentError => e
       flash[:danger] = e.message

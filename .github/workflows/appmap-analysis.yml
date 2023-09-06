@@ -1,0 +1,209 @@
+name: AppMap Analysis
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main # Change this to the name of the mainline branch
+  schedule:
+    - cron: '0 0 * * 0'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{  github.ref != 'refs/heads/main' }}
+
+env:
+  COVERAGE: true
+  RAILS_ENV: test
+  NODE_ENV: test
+  DATABASE_URL_TEST: postgres://postgres:postgres@localhost:5432/Forem_test
+  DATABASE_NAME_TEST: Forem_test
+  POSTGRES_PASSWORD: postgres
+
+jobs:
+  bundle_install:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+
+  yarn_install:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Look up if node_module cache exist
+        id: cache
+        uses: actions/cache/restore@v3
+        with:
+          lookup-only: true
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: ${{ runner.os }}-node-modules-
+      - name: Cache node_modules
+        uses: actions/cache@v3
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: ${{ runner.os }}-node-modules-
+        if: steps.cache.outputs.cache-hit != 'true'
+      - uses: actions/setup-node@v3
+        if: steps.cache.outputs.cache-hit != 'true'
+        with:
+          node-version: 16
+          cache: yarn
+      - run: yarn install --immutable
+        if: steps.cache.outputs.cache-hit != 'true'
+
+  precompile_assets:
+    runs-on: ubuntu-latest
+    env:
+      E2E: true
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Look up if compiled assets exist
+        uses: actions/cache@v3
+        id: precompiled-asset
+        with:
+          fail-on-cache-miss: false
+          path: |
+            public/assets
+            public/packs-test
+            tmp/cache/webpacker
+          key: ${{ runner.os }}-compiled-assets-v2-${{ hashFiles('app/assets/**', 'app/javascript/**', 'config/webpack/**', 'config/webpacker.yml', '**/package.json', '**/yarn.lock', '**/babel.config.js') }}
+          restore-keys: ${{ runner.os }}-compiled-assets-v2-
+      - name: setup ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+        if: steps.precompiled-asset.outputs.cache-hit != 'true'
+      - name: Cache node_modules
+        uses: actions/cache/restore@v3
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: ${{ runner.os }}-node-modules-
+        if: steps.precompiled-asset.outputs.cache-hit != 'true'
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+          cache: yarn
+        if: steps.precompiled-asset.outputs.cache-hit != 'true'
+      - run: yarn install --immutable
+        if: steps.precompiled-asset.outputs.cache-hit != 'true'
+      - run: bundle exec rails assets:precompile
+        if: steps.precompiled-asset.outputs.cache-hit != 'true'
+
+  rspec:
+    runs-on: ubuntu-latest
+    needs: [bundle_install, yarn_install, precompile_assets]
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:13-alpine
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+      redis:
+        image: redis
+        ports:
+          - 6379:6379
+
+    strategy:
+      fail-fast: false
+      matrix:
+        ci_node_total: [8]
+        ci_node_index: [0, 1, 2, 3, 4, 5, 6, 7]
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Restore compiled assets
+        uses: actions/cache/restore@v3
+        with:
+          fail-on-cache-miss: true
+          path: |
+            public/assets
+            public/packs-test
+            tmp/cache/webpacker
+          key: ${{ runner.os }}-compiled-assets-v2-${{ hashFiles('app/assets/**', 'app/javascript/**', 'config/webpack/**', 'config/webpacker.yml', '**/package.json', '**/yarn.lock', '**/babel.config.js') }}
+          restore-keys: ${{ runner.os }}-compiled-assets-v2-
+      - name: Restore node_modules
+        uses: actions/cache/restore@v3
+        with:
+          path: node_modules
+          key: ${{ runner.os }}-node-modules-${{ hashFiles('**/yarn.lock') }}
+          restore-keys: ${{ runner.os }}-node-modules-
+      - uses: actions/setup-node@v3
+        with:
+          node-version: 16
+          cache: yarn
+      - name: setup ruby
+        uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+      
+      - name: Enable appmap gem update
+        run: bundle config unset deployment    
+      - name: Install AppMap tools
+        id: install-appmap
+        uses: getappmap/install-action@v1
+        with:
+          project-type: bundler
+
+      - run: bundle exec rails db:test:prepare
+      - name: RSpec
+        env:
+          CI_NODE_TOTAL: ${{ matrix.ci_node_total }}
+          CI_NODE_INDEX: ${{ matrix.ci_node_index }}
+        run: |
+          ./bin/ci
+
+      - name: Delete Request AppMaps
+        if: always()
+        run: |
+          rm -fv tmp/appmap/requests
+
+      - name: Build the AppMap archive
+        if: always()
+        uses: getappmap/archive-action@v1
+        with:
+          archive-id: ${{ matrix.ci_node_index }}
+
+  appmap-analysis:
+    if: always()
+    runs-on: Ubuntu_4_Core
+    needs: [rspec]
+    permissions:
+      contents: read
+      actions: read
+      checks: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Install AppMap tools
+        id: install-appmap
+        uses: getappmap/install-action@v1
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          install-appmap-library: false
+
+      - name: Merge AppMaps
+        uses: getappmap/archive-action/merge@v1
+        with:
+          revision: ${{ github.event.pull_request.head.sha }}
+          archive-count: 8
+      
+      - name: Archive AppMaps
+        uses: getappmap/archive-action@v1
+        with:
+          revision: ${{ github.event.pull_request.base.sha }}

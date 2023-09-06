@@ -9,16 +9,14 @@ export default {
 
 export const Default = () => {
   return (
-    <ButtonGroup>
+    <ButtonGroup labelText="Example group of buttons">
       <Button variant="outlined">Action 1</Button>
       <Button variant="outlined">Action 2</Button>
     </ButtonGroup>
   );
 };
 
-Default.story = {
-  name: 'Text buttons',
-};
+Default.storyName = 'Text buttons';
 
 export const TextIcon = () => {
   const Icon = () => (
@@ -33,13 +31,11 @@ export const TextIcon = () => {
   );
 
   return (
-    <ButtonGroup>
+    <ButtonGroup labelText="Example group of buttons including an icon">
       <Button variant="secondary">Action 1</Button>
       <Button variant="secondary" icon={Icon} contentType="icon" />
     </ButtonGroup>
   );
 };
 
-TextIcon.story = {
-  name: 'Text button + Icon',
-};
+TextIcon.storyName = 'Text button + Icon';

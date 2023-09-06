@@ -1,16 +1,7 @@
 class SearchController < ApplicationController
-  before_action :authenticate_user!, only: %i[tags chat_channels reactions usernames]
+  before_action :authenticate_user!, only: %i[tags reactions usernames]
   before_action :format_integer_params
   before_action :sanitize_params, only: %i[listings reactions feed_content]
-
-  CHAT_CHANNEL_PARAMS = %i[
-    channel_status
-    channel_type
-    page
-    per_page
-    status
-    user_id
-  ].freeze
 
   LISTINGS_PARAMS = [
     :category,
@@ -55,30 +46,15 @@ class SearchController < ApplicationController
     :user_id,
     {
       tag_names: [],
+      hidden_tags: [],
       published_at: [:gte]
     },
   ].freeze
 
+  VALID_SORT_DIRECTIONS = %i[asc desc].freeze
+
   def tags
-    result = Search::Tag.search_documents(params[:name])
-
-    render json: { result: result }
-  end
-
-  def chat_channels
-    user_ids =
-      if chat_channel_params[:user_id].present?
-        [current_user.id, Settings::General.mascot_user_id, chat_channel_params[:user_id]].reject(&:blank?)
-      else
-        [current_user.id]
-      end
-
-    result = Search::ChatChannelMembership.search_documents(
-      user_ids: user_ids,
-      page: chat_channel_params[:page],
-      per_page: chat_channel_params[:per_page],
-    )
-
+    result = Search::Tag.search_documents(term: params[:name])
     render json: { result: result }
   end
 
@@ -94,11 +70,13 @@ class SearchController < ApplicationController
   end
 
   def usernames
-    result = Search::Username.search_documents(params[:username])
+    context = commentable_context(params[:context_type])&.find(params[:context_id])
+    result = Search::Username.search_documents(params[:username], context: context)
 
     render json: { result: result }
   end
 
+  # rubocop:disable Metrics/PerceivedComplexity, Metrics/CyclomaticComplexity
   def feed_content
     class_name = feed_params[:class_name].to_s.inquiry
 
@@ -129,6 +107,7 @@ class SearchController < ApplicationController
           user_id: feed_params[:user_id],
           organization_id: feed_params[:organization_id],
           tags: feed_params[:tag_names],
+          hidden_tags: feed_params[:hidden_tags],
           sort_by: params[:sort_by],
           sort_direction: params[:sort_direction],
           page: params[:page],
@@ -136,6 +115,14 @@ class SearchController < ApplicationController
         )
       elsif class_name.Comment?
         Search::Comment.search_documents(
+          page: feed_params[:page],
+          per_page: feed_params[:per_page],
+          sort_by: feed_params[:sort_by],
+          sort_direction: feed_params[:sort_direction],
+          term: feed_params[:search_fields],
+        )
+      elsif class_name.Organization?
+        Search::Organization.search_documents(
           page: feed_params[:page],
           per_page: feed_params[:per_page],
           sort_by: feed_params[:sort_by],
@@ -160,13 +147,19 @@ class SearchController < ApplicationController
         )
       elsif class_name.Article?
         search_postgres_article
+      elsif class_name.Tag?
+        Search::Tag.search_documents(
+          term: feed_params[:search_fields],
+          page: feed_params[:page],
+          per_page: feed_params[:per_page],
+        )
       end
-
     render json: { result: result }
   end
+  # rubocop:enable Metrics/PerceivedComplexity, Metrics/CyclomaticComplexity
 
   def reactions
-    # [@rhymes] we're recyling the existing params as we want to change the frontend as
+    # [@rhymes] we're recycling the existing params as we want to change the frontend as
     # little as possible, we might simplify in the future
     result = Search::ReadingList.search_documents(
       current_user,
@@ -182,6 +175,10 @@ class SearchController < ApplicationController
 
   private
 
+  def commentable_context(context_type)
+    context_type.constantize if Comment::COMMENTABLE_TYPES.include?(context_type)
+  end
+
   def search_postgres_article
     Search::Article.search_documents(
       term: feed_params[:search_fields],
@@ -191,10 +188,6 @@ class SearchController < ApplicationController
       page: feed_params[:page],
       per_page: feed_params[:per_page],
     )
-  end
-
-  def chat_channel_params
-    params.permit(CHAT_CHANNEL_PARAMS)
   end
 
   def listing_params
@@ -222,6 +215,14 @@ class SearchController < ApplicationController
   # nil differently. This is a helper method to remove any params that are
   # blank before passing it to Elasticsearch.
   def sanitize_params
-    params.delete_if { |_k, v| v.blank? }
+    params.compact_blank!
+    remove_invalid_sort_directions
+  end
+
+  def remove_invalid_sort_directions
+    return unless params.key?(:sort_direction)
+
+    direction = params[:sort_direction].downcase.to_sym
+    params.delete(:sort_direction) unless direction.in?(VALID_SORT_DIRECTIONS)
   end
 end

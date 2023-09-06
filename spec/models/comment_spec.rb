@@ -1,9 +1,11 @@
 require "rails_helper"
 
-RSpec.describe Comment, type: :model do
+RSpec.describe Comment do
   let(:user) { create(:user) }
   let(:article) { create(:article, user: user) }
   let(:comment) { create(:comment, user: user, commentable: article) }
+
+  before { allow(FeatureFlag).to receive(:enabled?).with(:consistent_rendering, any_args).and_return(true) }
 
   include_examples "#sync_reactions_count", :article_comment
 
@@ -11,8 +13,10 @@ RSpec.describe Comment, type: :model do
     subject { comment }
 
     describe "builtin validations" do
+      subject { build(:comment, user: user, commentable: article) }
+
       it { is_expected.to belong_to(:user) }
-      it { is_expected.to belong_to(:commentable).optional }
+      # it { is_expected.to belong_to(:commentable).optional }
       it { is_expected.to have_many(:reactions).dependent(:destroy) }
       it { is_expected.to have_many(:mentions).dependent(:destroy) }
       it { is_expected.to have_many(:notifications).dependent(:delete_all) }
@@ -22,10 +26,11 @@ RSpec.describe Comment, type: :model do
       it { is_expected.to validate_presence_of(:positive_reactions_count) }
       it { is_expected.to validate_presence_of(:public_reactions_count) }
       it { is_expected.to validate_presence_of(:reactions_count) }
-      it { is_expected.to validate_presence_of(:user_id) }
     end
 
     it do
+      skip "validate_uniqueness_of does not support array. Replace with custom validation"
+
       # rubocop:disable RSpec/NamedSubject
       subject.commentable = article
       subject.user = user
@@ -43,6 +48,7 @@ RSpec.describe Comment, type: :model do
         subject.commentable = build(:article, published: false)
 
         expect(subject).not_to be_valid
+        expect(subject.errors.full_messages).to include "Commentable is not a published article"
       end
 
       it "is invalid if commentable is an article and the discussion is locked" do
@@ -155,7 +161,7 @@ RSpec.describe Comment, type: :model do
       it "not double wrap an already-linked mention" do
         comment.body_markdown = "Hello <a href='/#{user.username}'>@#{user.username}</a>, you are cool."
         comment.validate!
-        expect(comment.processed_html.scan(/href/).count).to eq(1)
+        expect(comment.processed_html.scan("href").count).to eq(1)
       end
 
       it "does not wrap email mention with username" do
@@ -176,7 +182,7 @@ RSpec.describe Comment, type: :model do
         expect(comment.processed_html.include?("/#{user.username}")).to be(true)
       end
 
-      it "does case insentive mention recognition" do
+      it "does case incentive mention recognition" do
         comment.body_markdown = "Hello @#{user.username.titleize}, you are cool."
         comment.validate!
         expect(comment.processed_html.include?("/#{user.username}")).to be(true)
@@ -184,14 +190,33 @@ RSpec.describe Comment, type: :model do
         expect(comment.processed_html.include?("Hello <a")).to be(true)
       end
 
-      it "shortens long urls" do
-        comment.body_markdown = "Hello https://longurl.com/#{'x' * 100}?#{'y' * 100}"
+      it "shortens long urls without removing formatting", :aggregate_failures do
+        long_url = "https://longurl.com/#{'x' * 100}?#{'y' * 100}"
+        comment.body_markdown = "Hello #{long_url}"
         comment.validate!
-        expect(comment.processed_html.include?("...</a>")).to be(true)
+        expect(comment.processed_html.include?("...")).to be(true)
         expect(comment.processed_html.size < 450).to be(true)
+
+        comment.body_markdown = "Hello this is [**#{long_url}**](#{long_url})"
+        comment.validate!
+        expect(comment.processed_html.include?("...</strong>")).to be(true)
+
+        long_text = "Does not strip out text without urls #{'x' * 200}#{'y' * 200}"
+        comment.body_markdown = "[**#{long_text}**](#{long_url})"
+        comment.validate!
+        expect(comment.processed_html.include?("...")).to be(false)
+
+        image_url = "https://i.picsum.photos/id/126/500/500.jpg?hmac=jNnQC44a_UR01TNuazfKROio0T_HaZVg0ikfR0d_xWY"
+        comment.body_markdown = "Hello ![Alt-text](#{image_url})"
+        comment.validate!
+        expect(comment.processed_html.include?("<img src=\"#{image_url}\"")).to be(true)
       end
 
-      # rubocop:disable RSpec/ExampleLength
+      it "shortens urls for article link previews" do
+        comment.body_markdown = "{% link #{URL.url(article.path)} %}"
+        expect { comment.validate! }.not_to raise_error
+      end
+
       it "adds timestamp url if commentable has video and timestamp", :aggregate_failures do
         article.video = "https://example.com"
 
@@ -201,20 +226,20 @@ RSpec.describe Comment, type: :model do
 
         comment.body_markdown = "I like the part at 4:30 and 5:50"
         comment.validate!
-        expect(comment.processed_html.include?(">5:50</a>")).to eq(true)
+        expect(comment.processed_html.include?(">5:50</a>")).to be(true)
 
         comment.body_markdown = "I like the part at 5:30 and :55"
         comment.validate!
-        expect(comment.processed_html.include?(">:55</a>")).to eq(true)
+        expect(comment.processed_html.include?(">:55</a>")).to be(true)
 
         comment.body_markdown = "I like the part at 52:30"
         comment.validate!
-        expect(comment.processed_html.include?(">52:30</a>")).to eq(true)
+        expect(comment.processed_html.include?(">52:30</a>")).to be(true)
 
         comment.body_markdown = "I like the part at 1:52:30 and 1:20"
         comment.validate!
-        expect(comment.processed_html.include?(">1:52:30</a>")).to eq(true)
-        expect(comment.processed_html.include?(">1:20</a>")).to eq(true)
+        expect(comment.processed_html.include?(">1:52:30</a>")).to be(true)
+        expect(comment.processed_html.include?(">1:20</a>")).to be(true)
       end
       # rubocop:enable RSpec/ExampleLength
 
@@ -223,7 +248,7 @@ RSpec.describe Comment, type: :model do
 
         comment.body_markdown = "I like the part at 1:52:30 and 1:20"
         comment.validate!
-        expect(comment.processed_html.include?(">1:52:30</a>")).to eq(false)
+        expect(comment.processed_html.include?(">1:52:30</a>")).to be(false)
       end
 
       it "does not add DOCTYPE and html body to processed html" do
@@ -249,7 +274,7 @@ RSpec.describe Comment, type: :model do
     it "shows year in readable time if not current year" do
       comment.created_at = 1.year.ago
       last_year = 1.year.ago.year % 100
-      expect(comment.readable_publish_date.include?("'#{last_year}")).to eq(true)
+      expect(comment.readable_publish_date.include?("'#{last_year}")).to be(true)
     end
   end
 
@@ -303,11 +328,25 @@ RSpec.describe Comment, type: :model do
       expect(comment.title).to eq("[deleted]")
     end
 
+    it "is converted to image text if the comment is image" do
+      comment.body_markdown = "![image](https://myimage.com/image.png)"
+      comment.validate!
+      expect(comment.title).to eq("[image]")
+    end
+
     it "does not contain the wrong encoding" do
       comment.body_markdown = "It's the best post ever. It's so great."
 
       comment.validate!
       expect(comment.title).not_to include("&#39;")
+    end
+
+    # NOTE: example string taken from https://github.com/threedaymonk/htmlentities
+    # as this is the gem we're removing.
+    it "correctly decodes HTML entities" do
+      comment.body_markdown = "&eacute;lan"
+      comment.validate!
+      expect(comment.title).to eq("élan")
     end
   end
 
@@ -338,6 +377,42 @@ RSpec.describe Comment, type: :model do
       comments = described_class.tree_for(article, 1)
       expect(comments).to eq(comment => { child_comment => {} })
     end
+
+    context "with sort order" do
+      let!(:new_comment) { create(:comment, commentable: article, user: user, created_at: Date.tomorrow) }
+      let!(:old_comment) { create(:comment, commentable: article, user: user, created_at: Date.yesterday) }
+
+      before { comment }
+
+      it "returns comments in the right order when order is oldest" do
+        comments = described_class.tree_for(article, 0, "oldest")
+        comments = comments.map { |key, _| key.id }
+        expect(comments).to eq([old_comment.id, other_comment.id, comment.id, new_comment.id])
+      end
+
+      it "returns comments in the right order when order is latest" do
+        comments = described_class.tree_for(article, 0, "latest")
+        comments = comments.map { |key, _| key.id }
+        expect(comments).to eq([new_comment.id, comment.id, other_comment.id, old_comment.id])
+      end
+
+      # rubocop:disable RSpec/ExampleLength
+      it "returns comments in the right order when order is top" do
+        comment.update_column(:score, 5)
+        highest_rated_comment = comment
+        new_comment.update_column(:score, 1)
+        lowest_rated_comment = new_comment
+        old_comment.update_column(:score, 3)
+        mid_high_rated_comment = old_comment
+        other_comment.update_column(:score, 2)
+        mid_low_rated_comment = other_comment
+        comments = described_class.tree_for(article, 0)
+
+        comments = comments.map { |key, _| key.id }
+        expect(comments).to eq([highest_rated_comment.id, mid_high_rated_comment.id, mid_low_rated_comment.id, lowest_rated_comment.id]) # rubocop:disable Layout/LineLength
+      end
+      # rubocop:enable RSpec/ExampleLength
+    end
   end
 
   context "when callbacks are triggered after create" do
@@ -349,18 +424,13 @@ RSpec.describe Comment, type: :model do
       expect(comment.reload.id_code).to eq(comment.id.to_s(26))
     end
 
-    it "enqueue a worker to create the first reaction" do
-      expect do
-        comment.save
-      end.to change(Comments::CreateFirstReactionWorker.jobs, :size).by(1)
-    end
-
     it "enqueues a worker to calculate comment score" do
       expect do
         comment.save
       end.to change(Comments::CalculateScoreWorker.jobs, :size).by(1)
     end
 
+    # rubocop:disable RSpec/ExampleLength
     it "enqueues a worker to send email" do
       comment.save!
       child_comment_user = create(:user)
@@ -370,6 +440,7 @@ RSpec.describe Comment, type: :model do
         child_comment.save!
       end.to change(Comments::SendEmailNotificationWorker.jobs, :size).by(1)
     end
+    # rubocop:enable RSpec/ExampleLength
 
     it "enqueues a worker to bust comment cache" do
       expect do
@@ -418,46 +489,39 @@ RSpec.describe Comment, type: :model do
   end
 
   describe "spam" do
-    before do
-      allow(Settings::General).to receive(:mascot_user_id).and_return(user.id)
-      allow(Settings::RateLimit).to receive(:spam_trigger_terms).and_return(["yahoomagoo gogo", "anothertestterm"])
+    it "delegates spam handling to Spam::Handler.handle_comment!" do
+      allow(Spam::Handler).to receive(:handle_comment!).with(comment: comment).and_call_original
+      comment.save
+      expect(Spam::Handler).to have_received(:handle_comment!).with(comment: comment)
+    end
+  end
+
+  describe "#privileged_reaction_counts" do
+    it "contains correct vomit count" do
+      user = create(:user, :trusted)
+      create(:reaction, reactable: comment, category: "vomit", user: user)
+      counts = comment.privileged_reaction_counts
+      expect(counts["vomit"]).to eq(1)
     end
 
-    it "creates vomit reaction if possible spam" do
-      comment.body_markdown = "This post is about Yahoomagoo gogo"
-      comment.save
-      expect(Reaction.last.category).to eq("vomit")
-      expect(Reaction.last.user_id).to eq(user.id)
+    it "contains correct thumbsup count" do
+      user = create(:user, :trusted)
+      create(:reaction, reactable: comment, category: "thumbsup", user: user)
+      counts = comment.privileged_reaction_counts
+      expect(counts["thumbsup"]).to eq(1)
     end
 
-    it "does no suspend user if only single vomit" do
-      comment.body_markdown = "This post is about Yahoomagoo gogo"
-      comment.save
-      expect(comment.user.suspended?).to be false
+    it "contains correct thumbsdown count" do
+      user = create(:user, :trusted)
+      create(:reaction, reactable: comment, category: "thumbsdown", user: user)
+      counts = comment.privileged_reaction_counts
+      expect(counts["thumbsdown"]).to eq(1)
     end
 
-    it "suspends user with 3 comment vomits" do
-      comment.body_markdown = "This post is about Yahoomagoo gogo"
-      second_comment = create(:comment, user: comment.user, body_markdown: "This post is about Yahoomagoo gogo")
-      third_comment = create(:comment, user: comment.user, body_markdown: "This post is about Yahoomagoo gogo")
+    it "returns an empty hash if there are no privileged reactions" do
+      counts = comment.privileged_reaction_counts
 
-      comment.save
-      second_comment.save
-      third_comment.save
-      expect(comment.user.suspended?).to be true
-      expect(Note.last.reason).to eq "automatic_suspend"
-    end
-
-    it "does not create vomit reaction if user is established in this context" do
-      user.update_column(:registered_at, 10.days.ago)
-      comment.body_markdown = "This post is about Yahoomagoo gogo"
-      comment.save
-      expect(Reaction.last).to be nil
-    end
-
-    it "does not create vomit reaction if does not have matching title" do
-      comment.save
-      expect(Reaction.last).to be nil
+      expect(counts).to be_empty
     end
   end
 
@@ -510,6 +574,7 @@ RSpec.describe Comment, type: :model do
       expect(comment.notifications).to be_empty
     end
 
+    # rubocop:disable RSpec/ExampleLength
     it "updates the notifications of the descendants with [deleted]" do
       comment = create(:comment, commentable: article)
       child_comment = create(:comment, parent: comment, commentable: article, user: user)
@@ -520,6 +585,7 @@ RSpec.describe Comment, type: :model do
       notification = child_comment.notifications.first
       expect(notification.json_data["comment"]["ancestors"][0]["title"]).to eq("[deleted]")
     end
+    # rubocop:enable RSpec/ExampleLength
   end
 
   context "when callbacks are triggered after destroy" do
@@ -542,12 +608,31 @@ RSpec.describe Comment, type: :model do
     let(:comment) { create(:comment, ancestry: root_comment.id) }
 
     it "returns true if root is present" do
-      expect(comment.root_exists?).to eq(true)
+      expect(comment.root_exists?).to be(true)
     end
 
     it "returns false if root has been deleted" do
       root_comment.destroy
-      expect(comment.reload.root_exists?).to eq(false)
+      expect(comment.reload.root_exists?).to be(false)
+    end
+  end
+
+  describe "#by_staff_account?" do
+    let(:regular_user) { create(:user) }
+    let(:staff_account) { create(:user) }
+    let(:comment) { build(:comment, user: regular_user) }
+    let(:staff_comment) { build(:comment, user: staff_account) }
+
+    before do
+      allow(User).to receive(:staff_account).and_return(staff_account)
+    end
+
+    it "returns true if comment is by the staff account" do
+      expect(staff_comment.by_staff_account?).to be(true)
+    end
+
+    it "returns false if comment is not by the staff account" do
+      expect(comment.by_staff_account?).to be(false)
     end
   end
 end

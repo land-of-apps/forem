@@ -1,5 +1,5 @@
 import { h } from 'preact';
-import { render } from '@testing-library/preact';
+import { render, waitFor } from '@testing-library/preact';
 import { axe } from 'jest-axe';
 import fetch from 'jest-fetch-mock';
 import '@testing-library/jest-dom';
@@ -16,7 +16,8 @@ describe('<Onboarding />', () => {
         communityConfig={{
           communityName: 'Community Name',
           communityLogo: '/x.png',
-          communityBackground: '/y.jpg',
+          communityBackgroundColor: '#e6d800',
+          communityBackgroundColor2: '#999000',
           communityDescription: 'Some community description',
         }}
       />,
@@ -47,7 +48,7 @@ describe('<Onboarding />', () => {
   it('should render the IntroSlide first', () => {
     const { queryByTestId } = renderOnboarding();
 
-    expect(queryByTestId('onboarding-intro-slide')).toBeDefined();
+    expect(queryByTestId('onboarding-intro-slide')).toExist();
   });
 
   it('should allow the modal to move forward and backward a step where relevant', async () => {
@@ -65,6 +66,8 @@ describe('<Onboarding />', () => {
     // click to next step
     const nextButton = await findByText(/continue/i);
 
+    await waitFor(() => expect(nextButton).not.toHaveAttribute('disabled'));
+
     fetch.mockResponse(fakeEmptyResponse);
     nextButton.click();
 
@@ -78,16 +81,12 @@ describe('<Onboarding />', () => {
     // we should be on the Intro Slide step
     const introSlide = await findByTestId('onboarding-intro-slide');
 
-    expect(introSlide).toBeDefined();
+    expect(introSlide).toExist();
   });
 
   it("should skip the step when 'Skip for now' is clicked", async () => {
-    const {
-      getByTestId,
-      getByText,
-      findByText,
-      findByTestId,
-    } = renderOnboarding();
+    const { getByTestId, getByText, findByText, findByTestId } =
+      renderOnboarding();
     getByTestId('onboarding-intro-slide');
 
     fetch.mockResponseOnce({});
@@ -98,6 +97,7 @@ describe('<Onboarding />', () => {
 
     // click to next step
     const nextButton = await findByText(/continue/i);
+    await waitFor(() => expect(nextButton).not.toHaveAttribute('disabled'));
 
     fetch.mockResponse(fakeEmptyResponse);
     nextButton.click();
@@ -105,7 +105,7 @@ describe('<Onboarding />', () => {
     // we should be on the Follow tags step
     const followTagsStep = await findByTestId('onboarding-follow-tags');
 
-    expect(followTagsStep).toBeDefined();
+    expect(followTagsStep).toExist();
 
     // click on skip for now
     const skipButton = getByText(/Skip for now/i);
@@ -114,16 +114,12 @@ describe('<Onboarding />', () => {
     // we should be on the Profile Form step
     const profileStep = await findByTestId('onboarding-profile-form');
 
-    expect(profileStep).toBeDefined();
+    expect(profileStep).toExist();
   });
 
   it('should redirect the users to the correct steps every time', async () => {
-    const {
-      getByTestId,
-      getByText,
-      findByText,
-      findByTestId,
-    } = renderOnboarding();
+    const { getByTestId, getByText, findByText, findByTestId } =
+      renderOnboarding();
     getByTestId('onboarding-intro-slide');
 
     fetch.mockResponseOnce({});
@@ -134,6 +130,7 @@ describe('<Onboarding />', () => {
 
     // click to next step
     let nextButton = await findByText(/continue/i);
+    await waitFor(() => expect(nextButton).not.toHaveAttribute('disabled'));
 
     fetch.mockResponse(fakeEmptyResponse);
     nextButton.click();

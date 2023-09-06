@@ -1,13 +1,10 @@
 require "rails_helper"
 
-RSpec.describe "Omniauth redirect_uri", type: :system do
+RSpec.describe "Omniauth redirect_uri" do
   let!(:test_app_domain) { Settings::General.app_domain }
 
   # Avoid messing with other tests by resetting back Settings::General.app_domain
   after { Settings::General.app_domain = test_app_domain }
-
-  # Apple auth is in Beta so we need to enable the Feature Flag to test it
-  before { Flipper.enable(:apple_auth) }
 
   def provider_redirect_regex(provider_name)
     # URL encoding translates the query params (i.e. colons/slashes/etc)

@@ -1,7 +1,7 @@
 require "rails_helper"
 require "requests/shared_examples/comment_hide_or_unhide_request"
 
-RSpec.describe "Comments", type: :request do
+RSpec.describe "Comments" do
   let(:user) { create(:user) }
   let(:article) { create(:article, user: user) }
   let(:podcast) { create(:podcast) }
@@ -17,11 +17,6 @@ RSpec.describe "Comments", type: :request do
     it "displays a comment" do
       get comment.path
       expect(response.body).to include(comment.processed_html)
-    end
-
-    it "displays full discussion text" do
-      get comment.path
-      expect(response.body).to include("Full discussion")
     end
 
     it "renders user payment pointer if set" do
@@ -56,7 +51,7 @@ RSpec.describe "Comments", type: :request do
         expect(response.body).to include('<meta name="googlebot" content="noindex">')
       end
 
-      it "displays does not display noindex if comment has 0 or more score" do
+      it "does not display noindex if comment has 0 or more score" do
         get comment.path
         expect(response.body).not_to include('<meta name="googlebot" content="noindex">')
       end
@@ -65,6 +60,13 @@ RSpec.describe "Comments", type: :request do
         comment.commentable.update_column(:score, -5)
         get comment.path
         expect(response.body).to include('<meta name="googlebot" content="noindex">')
+      end
+
+      it "displays child comment if it's not hidden" do
+        child_comment = create(:comment, parent: comment, user: user, commentable: article)
+        comment.update(hidden_by_commentable_user: true)
+        get comment.path
+        expect(response.body).to include(child_comment.processed_html)
       end
     end
 
@@ -75,12 +77,6 @@ RSpec.describe "Comments", type: :request do
         get child.path
         expect(response.body).to include(CGI.escapeHTML(comment.title(150)))
         expect(response.body).to include(child.processed_html)
-      end
-
-      it "does not display the comment if it is hidden" do
-        child.update(hidden_by_commentable_user: true)
-        get comment.path
-        expect(response.body).not_to include child.processed_html
       end
     end
 
@@ -139,26 +135,18 @@ RSpec.describe "Comments", type: :request do
         create(:comment, parent_id: third_level_child.id, commentable: article, user: user)
       end
 
-      it "does not show the hidden comment in the article's comments section" do
-        get "#{article.path}/comments"
-        expect(response.body).not_to include(third_level_child.processed_html)
+      # When opening a hidden comment by a permalink we want to see the full thread including hidden comments.
+      it "shows hidden child comments in its parent's permalink when parent is also hidden" do
+        third_level_child
+        child.update_column(:hidden_by_commentable_user, true)
+        get child.path
+        expect(response.body).to include(third_level_child.processed_html)
       end
 
-      it "does not show the hidden comment's children in the article's comments section" do
-        fourth_level_child
-        get "#{article.path}/comments"
-        expect(response.body).not_to include(fourth_level_child.processed_html)
-      end
-
-      it "does not show the hidden comment in its parent's permalink" do
-        get second_level_child.path
-        expect(response.body).not_to include(third_level_child.processed_html)
-      end
-
-      it "does not show the hidden comment's child in its parent's permalink" do
+      it "shows the hidden comment's child in its parent's permalink if the child is not hidden explicitly" do
         fourth_level_child
         get second_level_child.path
-        expect(response.body).not_to include(fourth_level_child.processed_html)
+        expect(response.body).to include(fourth_level_child.processed_html)
       end
 
       it "shows the comment in the permalink" do
@@ -174,7 +162,7 @@ RSpec.describe "Comments", type: :request do
     end
 
     context "when the comment is for a podcast's episode" do
-      it "works" do
+      it "is successful" do
         podcast_comment = create(:comment, commentable: podcast_episode, user: user)
 
         get podcast_comment.path
@@ -195,14 +183,19 @@ RSpec.describe "Comments", type: :request do
     end
 
     context "when the article is deleted" do
-      it "index action renders deleted_commentable_comment view" do
-        article = create(:article)
-        comment = create(:comment, commentable: article)
+      it "raises not found when listing article comments" do
+        path = "#{article.path}/comments"
 
         article.destroy
 
+        expect { get path }.to raise_error(ActiveRecord::RecordNotFound)
+      end
+
+      it "shows comment from a deleted post" do
+        article.destroy
+
         get comment.path
-        expect(response.body).to include("Comment from a deleted article or podcast")
+        expect(response.body).to include("Comment from a deleted post")
       end
     end
 
@@ -212,14 +205,14 @@ RSpec.describe "Comments", type: :request do
         podcast_episode.destroy
 
         get podcast_comment.path
-        expect(response.body).to include("Comment from a deleted article or podcast")
+        expect(response.body).to include("Comment from a deleted post")
       end
     end
   end
 
   describe "GET /:username/:slug/comments/:id_code/edit" do
     context "when not logged-in" do
-      it "returns unauthorized error" do
+      it "raises unauthorized error" do
         expect do
           get "/#{user.username}/#{article.slug}/comments/#{comment.id_code_generated}/edit"
         end.to raise_error(Pundit::NotAuthorizedError)
@@ -261,6 +254,7 @@ RSpec.describe "Comments", type: :request do
 
   describe "PUT /comments/:id" do
     before do
+      allow(FeatureFlag).to receive(:enabled?).with(:consistent_rendering, any_args).and_return(true)
       sign_in user
     end
 
@@ -296,9 +290,28 @@ RSpec.describe "Comments", type: :request do
       expect(response).to have_http_status(:unauthorized)
     end
 
-    context "when logged-in" do
+    context "when logged-in and consistent rendering" do
       before do
         sign_in user
+        allow(FeatureFlag).to receive(:enabled?).with(:consistent_rendering, any_args).and_return(true)
+        post "/comments/preview",
+             params: { comment: { body_markdown: "hi" } },
+             headers: { HTTP_ACCEPT: "application/json" }
+      end
+
+      it "returns 200 on good request" do
+        expect(response).to have_http_status(:ok)
+      end
+
+      it "returns json" do
+        expect(response.media_type).to eq("application/json")
+      end
+    end
+
+    context "when logged-in and inconsistent rendering" do
+      before do
+        sign_in user
+        allow(FeatureFlag).to receive(:enabled?).with(:consistent_rendering, any_args).and_return(false)
         post "/comments/preview",
              params: { comment: { body_markdown: "hi" } },
              headers: { HTTP_ACCEPT: "application/json" }
@@ -324,6 +337,20 @@ RSpec.describe "Comments", type: :request do
           body_markdown: "New comment #{rand(10)}"
         }
       }
+    end
+
+    before { allow(FeatureFlag).to receive(:enabled?).with(:consistent_rendering, any_args).and_return(true) }
+
+    context "when a user is comment_suspended" do
+      before do
+        sign_in user
+        user.add_role(:comment_suspended)
+      end
+
+      it "returns not authorized" do
+        post "/comments", params: base_comment_params
+        expect(response).to have_http_status(:unauthorized)
+      end
     end
 
     context "when part of field test" do
@@ -371,7 +398,72 @@ RSpec.describe "Comments", type: :request do
       it "Delete notification when comment is hidden" do
         notification = user.notifications.last
         patch "/comments/#{comment.id}/hide", headers: { HTTP_ACCEPT: "application/json" }
-        expect(Notification.exists?(id: notification.id)).to eq(false)
+        expect(Notification.exists?(id: notification.id)).to be(false)
+      end
+
+      it "deletes children notification when comment is hidden" do
+        child_comment = create(:comment, commentable: article, user: user2, parent: comment)
+        Notification.send_new_comment_notifications_without_delay(child_comment)
+        notification = child_comment.notifications.last
+        patch "/comments/#{comment.id}/hide", params: { hide_children: "1" },
+                                              headers: { HTTP_ACCEPT: "application/json" }
+        child_comment.reload
+        expect(child_comment.hidden_by_commentable_user).to be true
+        expect(Notification.exists?(id: notification.id)).to be(false)
+      end
+    end
+
+    context "with hiding child comments" do
+      let(:commentable_author) { create(:user) }
+      let(:article) { create(:article, user: commentable_author) }
+      let(:parent_comment) { create(:comment, commentable: article, user: commentable_author) }
+      let!(:child_comment) { create(:comment, commentable: article, parent: parent_comment) }
+
+      before do
+        sign_in commentable_author
+      end
+
+      it "hides child comment when hide_children is passed" do
+        patch "/comments/#{parent_comment.id}/hide", params: { hide_children: "1" },
+                                                     headers: { HTTP_ACCEPT: "application/json" }
+        child_comment.reload
+        expect(child_comment.hidden_by_commentable_user).to be true
+      end
+
+      it "hides second level child if hide_children is passed" do
+        second_level_child = create(:comment, parent: child_comment, commentable: article, user: user)
+        patch "/comments/#{parent_comment.id}/hide", params: { hide_children: "1" },
+                                                     headers: { HTTP_ACCEPT: "application/json" }
+        second_level_child.reload
+        expect(second_level_child.hidden_by_commentable_user).to be true
+      end
+
+      it "hides child comment when hide_children is not passed" do
+        patch "/comments/#{parent_comment.id}/hide", params: { hide_children: "0" },
+                                                     headers: { HTTP_ACCEPT: "application/json" }
+        child_comment.reload
+        expect(child_comment.hidden_by_commentable_user).to be false
+      end
+    end
+
+    context "with comment by staff account" do
+      let(:staff_account) { create(:user) }
+      let(:commentable_author) { create(:user) }
+      let(:article) { create(:article, user: commentable_author) }
+      let(:comment) { create(:comment, commentable: article, user: staff_account) }
+
+      before do
+        allow(User).to receive(:staff_account).and_return(staff_account)
+        sign_in commentable_author
+      end
+
+      it "does not permit hiding the comment" do
+        expect do
+          patch "/comments/#{comment.id}/hide", headers: { HTTP_ACCEPT: "application/json" }
+        end.to raise_error(Pundit::NotAuthorizedError)
+
+        comment.reload
+        expect(comment.hidden_by_commentable_user).to be false
       end
     end
   end

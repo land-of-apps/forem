@@ -9,13 +9,14 @@ import {
   selectTag,
   clearSelectedTags,
 } from '../searchableItemList/searchableItemList';
+import { addSnackbarItem } from '../Snackbar';
 import { ItemListItem } from './components/ItemListItem';
 import { ItemListItemArchiveButton } from './components/ItemListItemArchiveButton';
 import { TagList } from './components/TagList';
 import { MediaQuery } from '@components/MediaQuery';
 import { BREAKPOINTS } from '@components/useMediaQuery';
 import { debounceAction } from '@utilities/debounceAction';
-import { Button } from '@crayons';
+import { ButtonNew as Button, Link } from '@crayons';
 import { request } from '@utilities/http';
 
 const NO_RESULTS_WITH_FILTER_MESSAGE = 'Nothing with this filter 🤔';
@@ -44,7 +45,6 @@ export class ReadingList extends Component {
     const { statusView } = this.props;
 
     this.state = {
-      archiving: false,
       query: '',
       index: null,
       page: 0,
@@ -106,7 +106,9 @@ export class ReadingList extends Component {
   toggleArchiveStatus = (event, item) => {
     event.preventDefault();
 
-    const { statusView, items } = this.state;
+    const { statusView, items, itemsTotal } = this.state;
+    const isStatusViewValid = this.statusViewValid();
+
     request(`/reading_list_items/${item.id}`, {
       method: 'PUT',
       body: { current_status: statusView },
@@ -115,14 +117,13 @@ export class ReadingList extends Component {
     const newItems = items;
     newItems.splice(newItems.indexOf(item), 1);
     this.setState({
-      archiving: true,
       items: newItems,
+      itemsTotal: itemsTotal - 1,
     });
 
-    // hide the snackbar in a few moments
-    setTimeout(() => {
-      this.setState({ archiving: false });
-    }, 1000);
+    addSnackbarItem({
+      message: isStatusViewValid ? 'Archiving...' : 'Unarchiving...',
+    });
   };
 
   statusViewValid() {
@@ -179,44 +180,45 @@ export class ReadingList extends Component {
       availableTags,
       selectedTag = '',
       showLoadMoreButton,
-      archiving,
       loading = false,
     } = this.state;
 
     const isStatusViewValid = this.statusViewValid();
     const archiveButtonLabel = isStatusViewValid ? 'Archive' : 'Unarchive';
 
-    const snackBar = archiving ? (
-      <div className="snackbar">
-        {isStatusViewValid ? 'Archiving...' : 'Unarchiving...'}
-      </div>
-    ) : (
-      ''
-    );
     return (
-      <main id="main-content">
-        <header className="crayons-layout l:grid-cols-2 pb-0">
-          <h1 class="crayons-title">
-            {isStatusViewValid ? 'Reading list' : 'Archive'}
-            {` (${itemsTotal})`}
-          </h1>
-          <fieldset className="grid gap-2 m:flex m:justify-end m:items-center l:mb-0 mb-2 px-2 m:px-0">
-            <legend className="hidden">Filter</legend>
-            <Button
+      <main
+        id="main-content"
+        className="crayons-layout crayons-layout--header-inside crayons-layout--2-cols"
+      >
+        <header className="crayons-page-header block s:flex">
+          <div className="flex justify-between items-center flex-1 mb-2 s:mb-0">
+            <h1 class="crayons-title flex-1">
+              {isStatusViewValid ? 'Reading list' : 'Archive'}
+              {` (${itemsTotal})`}
+            </h1>
+            <Link
               onClick={(e) => this.toggleStatusView(e)}
-              className="whitespace-nowrap l:mr-2"
-              variant="outlined"
-              url={READING_LIST_ARCHIVE_PATH}
-              tagName="a"
+              href={
+                isStatusViewValid
+                  ? READING_LIST_ARCHIVE_PATH
+                  : READING_LIST_PATH
+              }
+              className="whitespace-nowrap ml-auto s:w-auto"
+              block
               data-no-instant
             >
               {isStatusViewValid ? 'View archive' : 'View reading list'}
-            </Button>
+            </Link>
+          </div>
+          <fieldset className="m:flex justify-end s:pl-2 w-100 s:w-auto">
+            <legend className="hidden">Filter</legend>
             <input
               aria-label="Filter reading list by text"
               onKeyUp={this.onSearchBoxType}
-              placeholder="Enter some text to filter on..."
-              className="crayons-textfield"
+              type="text"
+              placeholder="Search..."
+              className="crayons-textfield mb-2 s:mb-0"
             />
             <MediaQuery
               query={`(max-width: ${BREAKPOINTS.Medium - 1}px)`}
@@ -239,7 +241,7 @@ export class ReadingList extends Component {
           query={`(min-width: ${BREAKPOINTS.Medium}px)`}
           render={(matches) => {
             return (
-              <div className="crayons-layout crayons-layout--2-cols">
+              <Fragment>
                 {matches && (
                   <div className="crayons-layout__sidebar-left">
                     <TagList
@@ -249,7 +251,7 @@ export class ReadingList extends Component {
                     />
                   </div>
                 )}
-                <section className="crayons-layout__content crayons-card mb-4">
+                <section className="crayons-layout__content crayons-card pb-4">
                   {items.length > 0 ? (
                     <Fragment>
                       <ItemList
@@ -259,11 +261,7 @@ export class ReadingList extends Component {
                       />
                       {showLoadMoreButton && (
                         <div className="flex justify-center my-2">
-                          <Button
-                            onClick={this.loadNextPage}
-                            variant="secondary"
-                            className="w-max"
-                          >
+                          <Button onClick={this.loadNextPage} className="w-max">
                             Load more
                           </Button>
                         </div>
@@ -273,11 +271,10 @@ export class ReadingList extends Component {
                     this.renderEmptyItems()
                   )}
                 </section>
-              </div>
+              </Fragment>
             );
           }}
         />
-        {snackBar}
       </main>
     );
   }

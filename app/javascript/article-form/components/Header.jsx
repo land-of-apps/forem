@@ -6,6 +6,7 @@ import { PageTitle } from './PageTitle';
 
 export const Header = ({
   onPreview,
+  previewLoading,
   previewShowing,
   organizations,
   organizationId,
@@ -24,6 +25,7 @@ export const Header = ({
         organizations={organizations}
         organizationId={organizationId}
         onToggle={onToggle}
+        previewLoading={previewLoading}
       />
       <Tabs onPreview={onPreview} previewShowing={previewShowing} />
       <Close displayModal={displayModal} />
@@ -34,10 +36,11 @@ export const Header = ({
 Header.propTypes = {
   displayModal: PropTypes.func.isRequired,
   onPreview: PropTypes.func.isRequired,
+  previewLoading: PropTypes.bool.isRequired,
   previewShowing: PropTypes.bool.isRequired,
-  organizations: PropTypes.string.isRequired,
-  organizationId: PropTypes.string.isRequired,
-  onToggle: PropTypes.string.isRequired,
+  organizations: PropTypes.arrayOf(PropTypes.object).isRequired,
+  organizationId: PropTypes.string,
+  onToggle: PropTypes.func.isRequired,
   siteLogo: PropTypes.string.isRequired,
 };
 

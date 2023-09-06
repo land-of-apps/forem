@@ -1,12 +1,12 @@
 module Emails
   class SendUserDigestWorker
-    include Sidekiq::Worker
+    include Sidekiq::Job
 
     sidekiq_options queue: :low_priority, retry: 15, lock: :until_executing
 
     def perform(user_id)
       user = User.find_by(id: user_id)
-      return unless user&.email_digest_periodic? && user&.registered?
+      return unless user&.notification_setting&.email_digest_periodic? && user&.registered?
 
       articles = EmailDigestArticleCollector.new(user).articles_to_send
       return unless articles.any?

@@ -1,6 +1,6 @@
 require "rails_helper"
 
-RSpec.describe "StoriesShow", type: :request do
+RSpec.describe "StoriesShow" do
   let(:user) { create(:user) }
   let(:org)     { create(:organization) }
   let(:article) { create(:article, user: user) }
@@ -46,12 +46,10 @@ RSpec.describe "StoriesShow", type: :request do
 
     ## Title tag
     it "renders signed-in title tag for signed-in user" do
-      allow(Settings::Community).to receive(:community_emoji).and_return("🌱")
-
       sign_in user
       get article.path
 
-      title = "<title>#{CGI.escapeHTML(article.title)} - #{community_name} #{community_emoji}</title>"
+      title = "<title>#{CGI.escapeHTML(article.title)} - #{community_name}</title>"
       expect(response.body).to include(title)
     end
 
@@ -71,13 +69,11 @@ RSpec.describe "StoriesShow", type: :request do
     end
 
     it "does not render title tag with search_optimized_title_preamble if set and not signed in" do
-      allow(Settings::Community).to receive(:community_emoji).and_return("🌱")
-
       sign_in user
       article.update_column(:search_optimized_title_preamble, "Hey this is a test")
       get article.path
 
-      title = "<title>#{CGI.escapeHTML(article.title)} - #{community_name} #{community_emoji}</title>"
+      title = "<title>#{CGI.escapeHTML(article.title)} - #{community_name}</title>"
       expect(response.body).to include(title)
     end
 
@@ -134,7 +130,7 @@ RSpec.describe "StoriesShow", type: :request do
       user2 = create(:user)
       article.update(co_author_ids: [user2.id])
       get article.path
-      expect(response.body).to include "<em>with <b><a href=\"#{user2.path}\">"
+      expect(response.body).to include %(with <a href="#{user2.path}" class="crayons-link">)
     end
 
     it "renders articles of long length without breaking" do
@@ -150,25 +146,31 @@ RSpec.describe "StoriesShow", type: :request do
 
     it "redirects to appropriate page if user changes username" do
       old_username = user.username
-      user.update(username: "new_hotness_#{rand(10_000)}")
+      user.update_columns(username: "new_hotness_#{rand(10_000)}", old_username: old_username,
+                          old_old_username: user.old_username)
       get "/#{old_username}/#{article.slug}"
+      user.reload
       expect(response.body).to redirect_to("/#{user.username}/#{article.slug}")
       expect(response).to have_http_status(:moved_permanently)
     end
 
     it "redirects to appropriate page if user changes username twice" do
       old_username = user.username
-      user.update(username: "new_hotness_#{rand(10_000)}")
-      user.update(username: "new_new_username_#{rand(10_000)}")
+      user.update_columns(username: "new_hotness_#{rand(10_000)}", old_username: old_username,
+                          old_old_username: user.old_username)
+      user.update_columns(username: "new_new_username_#{rand(10_000)}", old_username: user.username,
+                          old_old_username: user.old_username)
       get "/#{old_username}/#{article.slug}"
       expect(response.body).to redirect_to("/#{user.username}/#{article.slug}")
       expect(response).to have_http_status(:moved_permanently)
     end
 
     it "redirects to appropriate page if user changes username twice and go to middle username" do
-      user.update(username: "new_hotness_#{rand(10_000)}")
+      user.update_columns(username: "new_hotness_#{rand(10_000)}", old_username: user.username,
+                          old_old_username: user.old_username)
       middle_username = user.username
-      user.update(username: "new_new_username_#{rand(10_000)}")
+      user.update_columns(username: "new_new_username_#{rand(10_000)}", old_username: user.username,
+                          old_old_username: user.old_username)
       get "/#{middle_username}/#{article.slug}"
       expect(response.body).to redirect_to("/#{user.username}/#{article.slug}")
       expect(response).to have_http_status(:moved_permanently)
@@ -187,21 +189,16 @@ RSpec.describe "StoriesShow", type: :request do
     end
 
     it "handles invalid slug characters" do
-      allow(Article).to receive(:find_by).and_raise(ArgumentError)
+      # rubocop:disable RSpec/MessageChain
+      allow(Article).to receive_message_chain(:includes, :find_by).and_raise(ArgumentError)
+      # rubocop:enable RSpec/MessageChain
       get article.path
 
-      expect(response.status).to be(400)
+      expect(response).to have_http_status(:bad_request)
     end
 
     it "has noindex if article has low score" do
       article = create(:article, score: -5)
-      get article.path
-      expect(response.body).to include("noindex")
-    end
-
-    it "has noindex if article has low score even with <code>" do
-      article = create(:article, score: -5)
-      article.update_column(:processed_html, "<code>hello</code>")
       get article.path
       expect(response.body).to include("noindex")
     end
@@ -212,18 +209,23 @@ RSpec.describe "StoriesShow", type: :request do
       expect(response.body).not_to include("noindex")
     end
 
-    it "does not have noindex if article intermediate score and <code>" do
-      article = create(:article, score: 3)
-      article.update_column(:processed_html, "<code>hello</code>")
-      get article.path
-      expect(response.body).not_to include("noindex")
-    end
-
-    it "does not have noindex if article w/ intermediate score w/ 1 comment " do
+    it "does not have noindex if article w/ intermediate score w/ 1 comment" do
       article = create(:article, score: 3)
       article.user.update_column(:comments_count, 1)
       get article.path
       expect(response.body).not_to include("noindex")
+    end
+
+    it "renders og:image with main image if present ahead of social" do
+      article = create(:article, with_main_image: true, social_image: "https://example.com/image.jpg")
+      get article.path
+      expect(response.body).to include(%(property="og:image" content="#{article.main_image}"))
+    end
+
+    it "renders og:image with social if present and main image not so much" do
+      article = create(:article, with_main_image: false, social_image: "https://example.com/image.jpg")
+      get article.path
+      expect(response.body).to include(%(property="og:image" content="#{article.social_image}"))
     end
   end
 

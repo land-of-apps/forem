@@ -1,11 +1,10 @@
 require "rails_helper"
 
-RSpec.describe "/admin/customization/profile_field_groups", type: :request do
+RSpec.describe "/admin/customization/profile_field_groups" do
   let(:admin) { create(:user, :super_admin) }
 
   before do
     sign_in admin
-    allow(FeatureFlag).to receive(:enabled?).with(:profile_admin).and_return(true)
   end
 
   describe "POST /admin/customization/profile_field_groups" do

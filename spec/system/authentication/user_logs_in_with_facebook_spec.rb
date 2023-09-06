@@ -36,7 +36,7 @@ RSpec.describe "Authenticating with Facebook" do
       end
     end
 
-    context "when using valid credentials but witholding email address" do
+    context "when using valid credentials but withholding email address" do
       before do
         OmniAuth.config.mock_auth[:facebook][:info].delete(:email)
         OmniAuth.config.mock_auth[:facebook][:extra][:raw_info].delete(:email)
@@ -96,7 +96,7 @@ RSpec.describe "Authenticating with Facebook" do
       end
 
       after do
-        OmniAuth.config.on_failure = OmniauthHelpers.const_get("OMNIAUTH_DEFAULT_FAILURE_HANDLER")
+        OmniAuth.config.on_failure = OmniauthHelpers.const_get(:OMNIAUTH_DEFAULT_FAILURE_HANDLER)
       end
 
       it "does not create a new user" do
@@ -160,7 +160,7 @@ RSpec.describe "Authenticating with Facebook" do
       end
     end
 
-    context "when a validation failure occurrs" do
+    context "when a validation failure occurs" do
       before do
         # A User is invalid if their name is more than 100 chars long
         OmniAuth.config.mock_auth[:facebook].info.name = "X" * 101
@@ -220,21 +220,12 @@ RSpec.describe "Authenticating with Facebook" do
 
         expect(page).to have_current_path("/?signin=true")
       end
-
-      it "renders the facebook icon on the profile" do
-        sign_in user
-        visit user_facebook_omniauth_authorize_path
-
-        visit user_profile_path(user.username)
-
-        expect(page).to have_css("svg.crayons-icon.shrink-0", text: "facebook website")
-      end
     end
   end
 
-  context "when community is in invite only mode" do
+  context "when community is in invite-only mode" do
     before do
-      allow(ForemInstance).to receive(:private?).and_return(true)
+      allow(ForemInstance).to receive(:invitation_only?).and_return(true)
     end
 
     it "doesn't present the authentication option" do
