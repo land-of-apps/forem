@@ -164,6 +164,11 @@ jobs:
         run: |
           ./bin/ci
 
+      - name: Delete Request AppMaps
+        if: always()
+        run: |
+          rm -fv tmp/appmap/requests
+
       - name: Build the AppMap archive
         if: always()
         uses: getappmap/archive-action@v1
