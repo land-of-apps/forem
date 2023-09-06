@@ -1,9 +1,7 @@
 name: AppMap Analysis
 
 on:
-  push:
-    branches:
-      - test/before-breaking-change
+  pull_request:
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -165,7 +163,6 @@ jobs:
         if: always()
         uses: getappmap/archive-action@v1
         with:
-          revision: e99e803867e6650ce85b4f4720892672385a862d
           archive-id: ${{ matrix.ci_node_index }}
 
   appmap-analysis:
@@ -191,10 +188,13 @@ jobs:
       - name: Merge AppMaps
         uses: getappmap/archive-action/merge@v1
         with:
-          revision: e99e803867e6650ce85b4f4720892672385a862d
+          revision: ${{ github.event.pull_request.head.sha }}
           archive-count: 8
-      
-      - name: Archive AppMaps
-        uses: getappmap/archive-action@v1
+
+      - name: Analyze AppMaps
+        uses: getappmap/analyze-action@v1
+        if: (success() || failure()) && github.event_name == 'pull_request'
         with:
-          revision: e99e803867e6650ce85b4f4720892672385a862d
+          base-revision: e99e803867e6650ce85b4f4720892672385a862d
+          head-revision: ${{ github.event.pull_request.head.sha }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}
